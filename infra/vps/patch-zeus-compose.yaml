@@ -8,26 +8,14 @@ services:
       - sh
       - -c
       - |
-        sed -i '/server_name cardapionamesa.com/,/^}/d' /zeus/nginx.conf
+        awk '/^server \{/{buf=$0"\n";in=1;card=0;next} in{buf=buf $0"\n";if(/cardapionamesa/)card=1;if(/^}/){if(!card)printf "%s",buf;in=0;buf=""}next}{print}' /zeus/nginx.conf > /zeus/nginx.clean
+        grep -v 'proxy_set_header .* ;$$' /zeus/nginx.clean > /zeus/nginx.conf
         if grep -q 'cardapionamesa.com' /zeus/nginx.conf; then
           echo 'cardapionamesa.com ja configurado'
-          exit 0
+        else
+          echo 'c2VydmVyIHsKICAgIGxpc3RlbiA4MDsKICAgIHNlcnZlcl9uYW1lIGNhcmRhcGlvbmFtZXNhLmNvbSB3d3cuY2FyZGFwaW9uYW1lc2EuY29tOwogICAgbG9jYXRpb24gLyB7CiAgICAgICAgcHJveHlfcGFzcyBodHRwOi8vMTcyLjE3LjAuMTo4MDgwOwogICAgICAgIHByb3h5X2h0dHBfdmVyc2lvbiAxLjE7CiAgICAgICAgcHJveHlfc2V0X2hlYWRlciBIb3N0ICRob3N0OwogICAgICAgIHByb3h5X3NldF9oZWFkZXIgWC1SZWFsLUlQICRyZW1vdGVfYWRkcjsKICAgICAgICBwcm94eV9zZXRfaGVhZGVyIFgtRm9yd2FyZGVkLUZvciAkcHJveHlfYWRkX3hfZm9yd2FyZGVkX2ZvcjsKICAgICAgICBwcm94eV9zZXRfaGVhZGVyIFgtRm9yd2FyZGVkLVByb3RvICRzY2hlbWU7CiAgICAgICAgcHJveHlfc2V0X2hlYWRlciBVcGdyYWRlICRodHRwX3VwZ3JhZGU7CiAgICAgICAgcHJveHlfc2V0X2hlYWRlciBDb25uZWN0aW9uICJ1cGdyYWRlIjsKICAgIH0KfQo=' | base64 -d >> /zeus/nginx.conf
         fi
-        printf '%s\n' \
-          'server {' \
-          '    listen 80;' \
-          '    server_name cardapionamesa.com www.cardapionamesa.com;' \
-          '    location / {' \
-          '        proxy_pass http://172.17.0.1:8080;' \
-          '        proxy_http_version 1.1;' \
-          '        proxy_set_header Host $$host;' \
-          '        proxy_set_header X-Real-IP $$remote_addr;' \
-          '        proxy_set_header X-Forwarded-For $$proxy_add_x_forwarded_for;' \
-          '        proxy_set_header X-Forwarded-Proto $$scheme;' \
-          '        proxy_set_header Upgrade $$http_upgrade;' \
-          '        proxy_set_header Connection "upgrade";' \
-          '    }' \
-          '}' >> /zeus/nginx.conf
-        docker exec zeus-backend-nginx-1 nginx -t && docker exec zeus-backend-nginx-1 nginx -s reload
-        echo 'Zeus nginx OK — cardapionamesa.com'
+        docker exec zeus-backend-nginx-1 nginx -t
+        docker exec zeus-backend-nginx-1 nginx -s reload
+        echo 'Zeus nginx atualizado'
     restart: "no"
