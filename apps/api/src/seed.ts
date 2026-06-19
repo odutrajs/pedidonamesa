@@ -4,7 +4,7 @@ import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { Restaurant, User, Table, Category, Product } from './entities';
+import { Restaurant, User, Table, Category, Product, ProductSuggestion } from './entities';
 import { UserRole } from '@pedidonamesa/shared';
 
 async function seed() {
@@ -16,6 +16,7 @@ async function seed() {
   const tablesRepo = dataSource.getRepository(Table);
   const categoriesRepo = dataSource.getRepository(Category);
   const productsRepo = dataSource.getRepository(Product);
+  const suggestionsRepo = dataSource.getRepository(ProductSuggestion);
 
   let restaurant = await restaurantsRepo.findOne({ where: { slug: 'demo' } });
 
@@ -125,11 +126,38 @@ async function seed() {
       }),
     ]);
 
+    const savedProducts = await productsRepo
+      .createQueryBuilder('product')
+      .innerJoin('product.category', 'category')
+      .where('category.restaurantId = :restaurantId', { restaurantId: restaurant.id })
+      .getMany();
+
+    const xBurger = savedProducts.find((product) => product.name === 'X-Burger');
+    const cocaCola = savedProducts.find((product) => product.name === 'Coca-Cola');
+
+    if (xBurger && cocaCola) {
+      await suggestionsRepo.save(
+        suggestionsRepo.create({
+          sourceProductId: xBurger.id,
+          suggestedProductId: cocaCola.id,
+          sortOrder: 0,
+        }),
+      );
+    }
+
+    restaurant.upsellFoodOnlyEnabled = true;
+    restaurant.upsellDrinkCategoryId = bebidas.id;
+    restaurant.upsellFoodOnlyCategoryId = bebidas.id;
+    restaurant.upsellDrinksOnlyEnabled = true;
+    restaurant.upsellDrinksOnlyCategoryId = pratos.id;
+    await restaurantsRepo.save(restaurant);
+
     console.log('\n✅ Seed completo!\n');
     console.log('Admin: admin@demo.com / admin123');
     console.log('Cozinha: cozinha@demo.com / admin123');
     console.log(`Mesa 1 token (QR): ${tableToken}`);
-    console.log(`URL mesa: http://localhost:5173/mesa/${tableToken}\n`);
+    console.log(`URL mesa: http://localhost:5173/mesa/${tableToken}`);
+    console.log(`URL delivery: http://localhost:5173/entrega/demo\n`);
   } else {
     const table = await tablesRepo.findOne({ where: { restaurantId: restaurant.id, number: 1 } });
     console.log('Seed já existente. Mesa 1 token:', table?.token);

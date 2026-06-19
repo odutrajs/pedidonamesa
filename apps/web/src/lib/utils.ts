@@ -5,11 +5,40 @@ export function formatCurrency(value: number) {
   }).format(value);
 }
 
+export function parsePriceInput(value: string): number {
+  const normalized = value.trim().replace(',', '.');
+  if (!normalized) return NaN;
+  return parseFloat(normalized);
+}
+
 export function formatTime(date: string) {
   return new Intl.DateTimeFormat('pt-BR', {
     hour: '2-digit',
     minute: '2-digit',
   }).format(new Date(date));
+}
+
+export function formatDateTime(date: string) {
+  return new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(date));
+}
+
+export function formatRelativeTime(date: string) {
+  const diffMs = Date.now() - new Date(date).getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+
+  if (diffMin < 1) return 'agora';
+  if (diffMin === 1) return 'há 1 min';
+  if (diffMin < 60) return `há ${diffMin} min`;
+
+  const diffHours = Math.floor(diffMin / 60);
+  if (diffHours === 1) return 'há 1 h';
+  return `há ${diffHours} h`;
 }
 
 export function playNewOrderSound() {

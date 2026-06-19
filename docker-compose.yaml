@@ -40,6 +40,7 @@ services:
 
   api:
     image: ghcr.io/odutrajs/pedidonamesa-api:latest
+    pull_policy: always
     restart: unless-stopped
     depends_on:
       postgres:
@@ -69,20 +70,112 @@ services:
 
   web:
     image: ghcr.io/odutrajs/pedidonamesa-web:latest
+    pull_policy: always
     restart: unless-stopped
     expose:
       - "80"
 
+  cert-dummy:
+    image: alpine:3.20
+    volumes:
+      - certbot-etc:/etc/letsencrypt
+    entrypoint:
+      - sh
+      - -c
+      - |
+        mkdir -p /etc/letsencrypt/live/cardapionamesa.com-0001
+        if [ ! -s /etc/letsencrypt/live/cardapionamesa.com-0001/fullchain.pem ]; then
+          apk add --no-cache openssl
+          openssl req -x509 -nodes -newkey rsa:2048 -days 1 \
+            -keyout /etc/letsencrypt/live/cardapionamesa.com-0001/privkey.pem \
+            -out /etc/letsencrypt/live/cardapionamesa.com-0001/fullchain.pem \
+            -subj "/CN=cardapionamesa.com"
+        fi
+    restart: "no"
+
   nginx:
     image: ghcr.io/odutrajs/pedidonamesa-nginx:latest
+    pull_policy: always
     restart: unless-stopped
     ports:
-      - "8080:80"
+      - "80:80"
+      - "443:443"
+    volumes:
+      - certbot-etc:/etc/letsencrypt:ro
+      - certbot-www:/var/www/certbot:ro
     depends_on:
-      - api
-      - web
+      cert-dummy:
+        condition: service_completed_successfully
+      api:
+        condition: service_started
+      web:
+        condition: service_started
+      minio:
+        condition: service_started
+
+  certbot-init:
+    image: certbot/certbot
+    volumes:
+      - certbot-etc:/etc/letsencrypt
+      - certbot-www:/var/www/certbot
+    depends_on:
+      nginx:
+        condition: service_started
+    entrypoint:
+      - sh
+      - -c
+      - |
+        sleep 8
+        certbot certonly --webroot -w /var/www/certbot \
+          -d cardapionamesa.com -d www.cardapionamesa.com \
+          --email "$$CERTBOT_EMAIL" --agree-tos --non-interactive --keep-until-expiring \
+          || echo "certbot init skipped or failed"
+        exit 0
+    environment:
+      CERTBOT_EMAIL: ${CERTBOT_EMAIL}
+    restart: "no"
+
+  certbot-renew:
+    image: certbot/certbot
+    restart: unless-stopped
+    volumes:
+      - certbot-etc:/etc/letsencrypt
+      - certbot-www:/var/www/certbot
+    entrypoint:
+      - sh
+      - -c
+      - |
+        trap exit TERM
+        while :; do
+          certbot renew --quiet --webroot -w /var/www/certbot
+          sleep 12h & wait $${!}
+        done
+
+  nginx-reload:
+    image: docker:27-cli
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      certbot-init:
+        condition: service_completed_successfully
+    environment:
+      CERTBOT_EMAIL: ${CERTBOT_EMAIL}
+    entrypoint:
+      - sh
+      - -c
+      - |
+        if ! docker run --rm -v pedidonamesa_certbot-etc:/etc/letsencrypt:ro alpine test -s /etc/letsencrypt/live/cardapionamesa.com-0001/fullchain.pem; then
+          docker run --rm -v pedidonamesa_certbot-etc:/etc/letsencrypt -v pedidonamesa_certbot-www:/var/www/certbot \
+            certbot/certbot certonly --webroot -w /var/www/certbot \
+            -d cardapionamesa.com -d www.cardapionamesa.com \
+            --email "$CERTBOT_EMAIL" --agree-tos --non-interactive
+        fi
+        docker exec pedidonamesa-nginx-1 nginx -s reload && echo OK
+    restart: "no"
 
 volumes:
   pgdata:
   redisdata:
   miniodata:
+  certbot-etc:
+  certbot-www:

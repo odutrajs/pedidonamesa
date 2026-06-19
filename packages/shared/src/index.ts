@@ -1,8 +1,71 @@
+export enum MenuChannel {
+  TABLE = 'TABLE',
+  DELIVERY = 'DELIVERY',
+}
+
+export const MENU_CHANNEL_LABELS: Record<MenuChannel, string> = {
+  [MenuChannel.TABLE]: 'Salão / QR',
+  [MenuChannel.DELIVERY]: 'Delivery',
+};
+
+export function parseProductChannels(
+  raw: string | string[] | null | undefined,
+): MenuChannel[] {
+  if (!raw || (Array.isArray(raw) && raw.length === 0)) {
+    return [MenuChannel.TABLE, MenuChannel.DELIVERY];
+  }
+
+  const values = Array.isArray(raw) ? raw : raw.split(',');
+  return values
+    .map((value) => value.trim())
+    .filter((value): value is MenuChannel =>
+      Object.values(MenuChannel).includes(value as MenuChannel),
+    );
+}
+
+export function isProductOnChannel(
+  product: { channels?: string | string[] | null },
+  channel: MenuChannel,
+): boolean {
+  return parseProductChannels(product.channels ?? undefined).includes(channel);
+}
+
 export enum UserRole {
   ADMIN = 'ADMIN',
   KITCHEN = 'KITCHEN',
   WAITER = 'WAITER',
 }
+
+export enum PaymentMode {
+  PAY_BEFORE = 'PAY_BEFORE',
+  PAY_AFTER = 'PAY_AFTER',
+}
+
+export enum PaymentStatus {
+  NOT_REQUIRED = 'NOT_REQUIRED',
+  PENDING = 'PENDING',
+  PAID = 'PAID',
+  FAILED = 'FAILED',
+}
+
+export enum PaymentMethod {
+  PIX = 'PIX',
+  CARD = 'CARD',
+  APPLE_PAY = 'APPLE_PAY',
+  GOOGLE_PAY = 'GOOGLE_PAY',
+}
+
+export const PAYMENT_MODE_LABELS: Record<PaymentMode, string> = {
+  [PaymentMode.PAY_BEFORE]: 'Pagamento antes do pedido',
+  [PaymentMode.PAY_AFTER]: 'Pagamento após o pedido',
+};
+
+export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
+  [PaymentStatus.NOT_REQUIRED]: 'Não exigido',
+  [PaymentStatus.PENDING]: 'Aguardando pagamento',
+  [PaymentStatus.PAID]: 'Pago',
+  [PaymentStatus.FAILED]: 'Falhou',
+};
 
 export enum OrderStatus {
   PENDING = 'PENDING',
@@ -60,6 +123,21 @@ export interface ProductDto {
   available: boolean;
   sortOrder: number;
   categoryId: string;
+  suggestedProductIds: string[];
+  channels: MenuChannel[];
+}
+
+export interface UpsellSuggestionDto {
+  product: ProductDto;
+  reason: 'product' | 'food_only' | 'drinks_only';
+}
+
+export interface UpsellConfigDto {
+  drinkCategoryId: string | null;
+  foodOnlyEnabled: boolean;
+  foodOnlyCategoryId: string | null;
+  drinksOnlyEnabled: boolean;
+  drinksOnlyCategoryId: string | null;
 }
 
 export interface CategoryDto {
@@ -91,25 +169,74 @@ export interface OrderItemDto {
 
 export interface OrderDto {
   id: string;
-  tableId: string;
-  tableNumber: number;
+  channel: MenuChannel;
+  tableId: string | null;
+  tableNumber: number | null;
   tableLabel: string | null;
+  customerName: string | null;
+  customerPhone: string | null;
+  deliveryAddress: string | null;
   status: OrderStatus;
   notes: string | null;
   total: number;
+  paymentStatus: PaymentStatus;
+  paymentMethod: PaymentMethod | null;
+  paidAt: string | null;
   createdAt: string;
   updatedAt: string;
   items: OrderItemDto[];
 }
 
+export interface CreateOrderResponse {
+  order: OrderDto;
+  paymentRequired: boolean;
+}
+
 export interface MenuDto {
+  channel: MenuChannel;
   restaurant: {
     id: string;
     name: string;
     slug: string;
+    paymentMode: PaymentMode;
   };
-  table: TableDto;
+  payment: {
+    stripePublishableKey: string | null;
+  };
+  table: TableDto | null;
   categories: CategoryDto[];
+  upsell: UpsellConfigDto;
+}
+
+export interface RestaurantSettingsDto {
+  id: string;
+  name: string;
+  slug: string;
+  paymentMode: PaymentMode;
+  upsellDrinkCategoryId: string | null;
+  upsellFoodOnlyEnabled: boolean;
+  upsellFoodOnlyCategoryId: string | null;
+  upsellDrinksOnlyEnabled: boolean;
+  upsellDrinksOnlyCategoryId: string | null;
+}
+
+export interface StripeCheckoutDto {
+  clientSecret: string;
+  publishableKey: string;
+}
+
+export interface PixCheckoutDto {
+  paymentId: string;
+  qrCode: string;
+  qrCodeBase64: string;
+  expiresAt: string | null;
+}
+
+export interface PaymentStatusDto {
+  paymentStatus: PaymentStatus;
+  paymentMethod: PaymentMethod | null;
+  paidAt: string | null;
+  orderStatus: OrderStatus;
 }
 
 export interface CreateOrderItemInput {
@@ -121,6 +248,12 @@ export interface CreateOrderItemInput {
 export interface CreateOrderInput {
   items: CreateOrderItemInput[];
   notes?: string;
+}
+
+export interface CreateDeliveryOrderInput extends CreateOrderInput {
+  customerName: string;
+  customerPhone: string;
+  deliveryAddress: string;
 }
 
 export const WS_EVENTS = {

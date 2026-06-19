@@ -23,6 +23,19 @@ export class StorageService implements OnModuleInit {
     if (!exists) {
       await this.client.makeBucket(this.bucket, 'us-east-1');
     }
+
+    const policy = {
+      Version: '2012-10-17',
+      Statement: [
+        {
+          Effect: 'Allow',
+          Principal: { AWS: ['*'] },
+          Action: ['s3:GetObject'],
+          Resource: [`arn:aws:s3:::${this.bucket}/products/*`],
+        },
+      ],
+    };
+    await this.client.setBucketPolicy(this.bucket, JSON.stringify(policy));
   }
 
   async uploadProductImage(

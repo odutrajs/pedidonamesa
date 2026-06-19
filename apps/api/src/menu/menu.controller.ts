@@ -9,4 +9,9 @@ export class MenuController {
   getMenuByTable(@Param('token') token: string) {
     return this.menuService.getMenuByTableToken(token);
   }
+
+  @Get('entrega/:slug')
+  getMenuByDelivery(@Param('slug') slug: string) {
+    return this.menuService.getMenuByDeliverySlug(slug);
+  }
 }
