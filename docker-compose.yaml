@@ -81,6 +81,7 @@ services:
     depends_on:
       - api
       - web
+      - minio
 
 volumes:
   pgdata:

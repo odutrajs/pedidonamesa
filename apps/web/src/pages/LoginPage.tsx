@@ -1,64 +1,56 @@
-import { FormEvent, useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { AppShell } from '../components/AppShell';
-import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
+import { useLogin } from '../hooks/useLogin';
+
+interface LoginFormValues {
+  email: string;
+  password: string;
+}
 
 export function LoginPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
-  const [email, setEmail] = useState('admin@demo.com');
-  const [password, setPassword] = useState('admin123');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const loginMutation = useLogin();
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginFormValues>({
+    defaultValues: { email: 'admin@demo.com', password: 'admin123' },
+  });
 
-    try {
-      const data = await api<{
-        accessToken: string;
-        user: { id: string; name: string; email: string; role: string; restaurantId: string };
-      }>('/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({ email, password }),
-      });
-
-      login(data.accessToken, data.user);
-
-      if (data.user.role === 'KITCHEN') {
-        navigate('/cozinha');
-      } else {
-        navigate('/admin');
-      }
-    } catch {
-      setError('Credenciais inválidas');
-    } finally {
-      setLoading(false);
-    }
+  function onSubmit(data: LoginFormValues) {
+    loginMutation.mutate(data, {
+      onSuccess: (response) => {
+        login(response.accessToken, response.user);
+        if (response.user.role === 'KITCHEN') {
+          navigate('/cozinha');
+        } else {
+          navigate('/admin');
+        }
+      },
+    });
   }
 
   return (
     <AppShell title="Entrar" subtitle="Admin, cozinha ou garçom">
-      <form onSubmit={handleSubmit} className="card mx-auto max-w-md space-y-4 p-6">
+      <form onSubmit={handleSubmit(onSubmit)} className="card mx-auto max-w-md space-y-4 p-6">
         <div>
           <label className="mb-1 block text-sm font-medium">E-mail</label>
-          <input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <input className="input" type="email" {...register('email', { required: true })} />
         </div>
         <div>
           <label className="mb-1 block text-sm font-medium">Senha</label>
-          <input
-            className="input"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
+          <input className="input" type="password" {...register('password', { required: true })} />
         </div>
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        <button className="btn-primary w-full" disabled={loading}>
-          {loading ? 'Entrando...' : 'Entrar'}
+        {(loginMutation.isError || errors.email || errors.password) && (
+          <p className="text-sm text-red-600">Credenciais inválidas</p>
+        )}
+        <button className="btn-primary w-full" disabled={loginMutation.isPending}>
+          {loginMutation.isPending ? 'Entrando...' : 'Entrar'}
         </button>
         <p className="text-center text-xs text-stone-500">
           Demo: admin@demo.com ou cozinha@demo.com — senha admin123

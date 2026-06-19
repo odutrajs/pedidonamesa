@@ -1,4 +1,5 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
+import { queryClient } from '../lib/query-client';
 
 interface AuthUser {
   id: string;
@@ -47,6 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setToken(null);
         setUser(null);
         localStorage.removeItem(STORAGE_KEY);
+        queryClient.clear();
       },
     }),
     [token, user],

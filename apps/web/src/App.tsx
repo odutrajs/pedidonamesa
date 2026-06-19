@@ -1,31 +1,49 @@
+import { Suspense, lazy } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { HomePage } from './pages/HomePage';
-import { LoginPage } from './pages/LoginPage';
-import { TableMenuPage } from './pages/TableMenuPage';
-import { KitchenPage } from './pages/KitchenPage';
-import { AdminPage } from './pages/AdminPage';
+
+const LoginPage = lazy(() =>
+  import('./pages/LoginPage').then((m) => ({ default: m.LoginPage })),
+);
+const TableMenuPage = lazy(() =>
+  import('./pages/TableMenuPage').then((m) => ({ default: m.TableMenuPage })),
+);
+const KitchenPage = lazy(() =>
+  import('./pages/KitchenPage').then((m) => ({ default: m.KitchenPage })),
+);
+const AdminPage = lazy(() =>
+  import('./pages/AdminPage').then((m) => ({ default: m.AdminPage })),
+);
+
+const PageLoader = () => (
+  <div className="flex min-h-[40vh] items-center justify-center text-stone-500">
+    Carregando...
+  </div>
+);
 
 export function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/mesa/:token" element={<TableMenuPage />} />
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/mesa/:token" element={<TableMenuPage />} />
 
-          <Route element={<ProtectedRoute roles={['ADMIN', 'KITCHEN', 'WAITER']} />}>
-            <Route path="/cozinha" element={<KitchenPage />} />
-          </Route>
+            <Route element={<ProtectedRoute roles={['ADMIN', 'KITCHEN', 'WAITER']} />}>
+              <Route path="/cozinha" element={<KitchenPage />} />
+            </Route>
 
-          <Route element={<ProtectedRoute roles={['ADMIN']} />}>
-            <Route path="/admin" element={<AdminPage />} />
-          </Route>
+            <Route element={<ProtectedRoute roles={['ADMIN']} />}>
+              <Route path="/admin" element={<AdminPage />} />
+            </Route>
 
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
       </BrowserRouter>
     </AuthProvider>
   );

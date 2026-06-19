@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -7,8 +8,11 @@ import {
   Patch,
   Post,
   Req,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { UserRole } from '@pedidonamesa/shared';
 import { JwtAuthGuard, assertRole } from '../auth/jwt-auth.guard';
 import { User } from '../entities/user.entity';
@@ -75,6 +79,29 @@ export class AdminController {
   ) {
     assertRole(req.user, [UserRole.ADMIN]);
     return this.adminService.updateProduct(id, req.user.restaurantId, dto);
+  }
+
+  @Post('products/:id/image')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: 5 * 1024 * 1024 },
+      fileFilter: (_req, file, cb) => {
+        if (!/^image\/(jpeg|png|webp|gif)$/.test(file.mimetype)) {
+          cb(new BadRequestException('Formato de imagem não suportado'), false);
+          return;
+        }
+        cb(null, true);
+      },
+    }),
+  )
+  uploadProductImage(
+    @Param('id') id: string,
+    @Req() req: { user: User },
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    assertRole(req.user, [UserRole.ADMIN]);
+    if (!file) throw new BadRequestException('Arquivo de imagem obrigatório');
+    return this.adminService.uploadProductImage(id, req.user.restaurantId, file);
   }
 
   @Delete('products/:id')

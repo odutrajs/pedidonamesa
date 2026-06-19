@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 import { Category, Product, Table } from '../entities';
+import { StorageService } from '../storage/storage.service';
 import {
   CreateCategoryDto,
   CreateProductDto,
@@ -21,6 +22,7 @@ export class AdminService {
     private readonly productsRepo: Repository<Product>,
     @InjectRepository(Table)
     private readonly tablesRepo: Repository<Table>,
+    private readonly storage: StorageService,
   ) {}
 
   getCategories(restaurantId: string) {
@@ -93,6 +95,30 @@ export class AdminService {
     }
 
     Object.assign(product, dto);
+    return this.productsRepo.save(product);
+  }
+
+  async uploadProductImage(
+    id: string,
+    restaurantId: string,
+    file: Express.Multer.File,
+  ) {
+    const product = await this.productsRepo
+      .createQueryBuilder('product')
+      .innerJoin('product.category', 'category')
+      .where('product.id = :id', { id })
+      .andWhere('category.restaurantId = :restaurantId', { restaurantId })
+      .getOne();
+
+    if (!product) throw new NotFoundException('Produto não encontrado');
+
+    const imageUrl = await this.storage.uploadProductImage(
+      file.originalname,
+      file.buffer,
+      file.mimetype,
+    );
+
+    product.imageUrl = imageUrl;
     return this.productsRepo.save(product);
   }
 

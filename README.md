@@ -107,7 +107,7 @@ Autenticação via JWT no handshake (`auth.token`).
 ## Próximos passos
 
 - [ ] BullMQ worker (notificações, relatórios)
-- [ ] Upload de imagens de produto via MinIO
+- [x] Upload de imagens de produto via MinIO
 - [ ] Tela do garçom (pedidos prontos para entregar)
 - [ ] Multi-tenant (vários restaurantes)
 - [ ] Pagamento integrado
