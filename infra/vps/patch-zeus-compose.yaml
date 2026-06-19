@@ -8,26 +8,26 @@ services:
       - sh
       - -c
       - |
+        sed -i '/server_name cardapionamesa.com/,/^}/d' /zeus/nginx.conf
         if grep -q 'cardapionamesa.com' /zeus/nginx.conf; then
           echo 'cardapionamesa.com ja configurado'
           exit 0
         fi
-        cat >> /zeus/nginx.conf <<'NGINX_EOF'
-        server {
-            listen 80;
-            server_name cardapionamesa.com www.cardapionamesa.com;
-            location / {
-                proxy_pass http://172.17.0.1:8080;
-                proxy_http_version 1.1;
-                proxy_set_header Host $host;
-                proxy_set_header X-Real-IP $remote_addr;
-                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                proxy_set_header X-Forwarded-Proto $scheme;
-                proxy_set_header Upgrade $http_upgrade;
-                proxy_set_header Connection "upgrade";
-            }
-        }
-        NGINX_EOF
-        docker exec zeus-backend-nginx-1 nginx -s reload
-        echo 'Zeus nginx atualizado — cardapionamesa.com -> pedidonamesa:8080'
+        printf '%s\n' \
+          'server {' \
+          '    listen 80;' \
+          '    server_name cardapionamesa.com www.cardapionamesa.com;' \
+          '    location / {' \
+          '        proxy_pass http://172.17.0.1:8080;' \
+          '        proxy_http_version 1.1;' \
+          '        proxy_set_header Host $$host;' \
+          '        proxy_set_header X-Real-IP $$remote_addr;' \
+          '        proxy_set_header X-Forwarded-For $$proxy_add_x_forwarded_for;' \
+          '        proxy_set_header X-Forwarded-Proto $$scheme;' \
+          '        proxy_set_header Upgrade $$http_upgrade;' \
+          '        proxy_set_header Connection "upgrade";' \
+          '    }' \
+          '}' >> /zeus/nginx.conf
+        docker exec zeus-backend-nginx-1 nginx -t && docker exec zeus-backend-nginx-1 nginx -s reload
+        echo 'Zeus nginx OK — cardapionamesa.com'
     restart: "no"
