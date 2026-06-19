@@ -1,5 +1,6 @@
 import { memo, useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { ImagePlus, Package, Plus, Upload } from 'lucide-react';
 import {
   useCategories,
   useCreateProduct,
@@ -9,6 +10,12 @@ import {
 } from '../../hooks/useAdmin';
 import { formatCurrency } from '../../lib/utils';
 import type { AdminProduct, Category, ProductFormValues } from '../../types/admin';
+import { Card } from '../ui/Card';
+import { Button } from '../ui/Button';
+import { Input, Label, Select } from '../ui/Input';
+import { Badge } from '../ui/Badge';
+import { Skeleton } from '../ui/Skeleton';
+import { EmptyState } from '../ui/EmptyState';
 
 const ProductRow = memo(function ProductRow({
   product,
@@ -26,27 +33,33 @@ const ProductRow = memo(function ProductRow({
   isUploading: boolean;
 }) {
   return (
-    <li className="card flex items-center justify-between gap-3 p-4">
-      <div className="flex items-center gap-3">
+    <li className="flex items-center justify-between gap-4 px-4 py-4">
+      <div className="flex min-w-0 items-center gap-3">
         {product.imageUrl ? (
           <img
             src={product.imageUrl}
             alt={product.name}
             loading="lazy"
             decoding="async"
-            className="h-14 w-14 shrink-0 rounded-lg object-cover"
+            className="h-12 w-12 shrink-0 rounded-lg object-cover ring-1 ring-zinc-200"
           />
         ) : (
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-stone-100 text-xs text-stone-400">
-            Sem foto
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-zinc-100">
+            <ImagePlus className="h-4 w-4 text-zinc-400" />
           </div>
         )}
-        <div>
-          <p className="font-semibold">{product.name}</p>
-          <p className="text-sm text-stone-500">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <p className="truncate font-medium text-zinc-900">{product.name}</p>
+            <Badge variant={product.available ? 'success' : 'muted'}>
+              {product.available ? 'Disponível' : 'Indisponível'}
+            </Badge>
+          </div>
+          <p className="text-sm text-zinc-500">
             {formatCurrency(Number(product.price))} · {categoryName}
           </p>
-          <label className="mt-1 inline-block cursor-pointer text-xs font-medium text-brand-700">
+          <label className="mt-1 inline-flex cursor-pointer items-center gap-1 text-xs font-medium text-brand-600 hover:text-brand-700">
+            <Upload className="h-3 w-3" />
             {isUploading ? 'Enviando...' : product.imageUrl ? 'Trocar imagem' : 'Adicionar imagem'}
             <input
               type="file"
@@ -62,13 +75,14 @@ const ProductRow = memo(function ProductRow({
           </label>
         </div>
       </div>
-      <button
-        className={product.available ? 'btn-secondary' : 'btn-primary'}
+      <Button
+        variant={product.available ? 'outline' : 'primary'}
+        size="sm"
         disabled={isToggling}
         onClick={() => onToggle(product.id, !product.available)}
       >
         {product.available ? 'Desativar' : 'Ativar'}
-      </button>
+      </Button>
     </li>
   );
 });
@@ -123,61 +137,80 @@ export const ProductsTab = memo(function ProductsTab() {
   }
 
   if (loadingCategories || loadingProducts) {
-    return <p className="text-stone-500">Carregando produtos...</p>;
+    return (
+      <div className="space-y-3">
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-16 w-full" />
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-4">
-      <form onSubmit={handleSubmit(onSubmit)} className="card grid gap-3 p-4 md:grid-cols-2">
-        <input className="input" placeholder="Nome do produto" {...register('name')} />
-        <input
-          className="input"
-          placeholder="Preço"
-          type="number"
-          step="0.01"
-          {...register('price')}
-        />
-        <select className="input" {...register('categoryId')}>
-          {categories.map((c: Category) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-        <input className="input" placeholder="Descrição" {...register('description')} />
-        <div className="md:col-span-2">
-          <label className="mb-1 block text-sm font-medium">Imagem do produto</label>
-          <input
-            className="input"
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif"
-            onChange={(e) => handleImageChange(e.target.files?.[0] ?? null)}
-          />
-          {productImagePreview && (
-            <img
-              src={productImagePreview}
-              alt="Prévia"
-              className="mt-2 h-24 w-24 rounded-lg object-cover"
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-lg font-semibold text-zinc-900">Produtos</h2>
+        <p className="mt-1 text-sm text-zinc-500">
+          Adicione itens ao cardápio com foto, preço e descrição.
+        </p>
+      </div>
+
+      <Card>
+        <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4 md:grid-cols-2">
+          <Input placeholder="Nome do produto" {...register('name')} />
+          <Input placeholder="Preço" type="number" step="0.01" {...register('price')} />
+          <Select {...register('categoryId')}>
+            {categories.map((c: Category) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </Select>
+          <Input placeholder="Descrição (opcional)" {...register('description')} />
+          <div className="md:col-span-2">
+            <Label>Imagem do produto</Label>
+            <Input
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              onChange={(e) => handleImageChange(e.target.files?.[0] ?? null)}
             />
-          )}
-        </div>
-        <button className="btn-primary md:col-span-2" disabled={createProduct.isPending}>
-          {createProduct.isPending ? 'Salvando...' : 'Adicionar produto'}
-        </button>
-      </form>
-      <ul className="space-y-2">
-        {products.map((p: AdminProduct) => (
-          <ProductRow
-            key={p.id}
-            product={p}
-            categoryName={categoryMap.get(p.categoryId) ?? '—'}
-            onToggle={(id, available) => toggleProduct.mutate({ id, available })}
-            onUploadImage={(id, file) => uploadImage.mutate({ productId: id, file })}
-            isToggling={toggleProduct.isPending}
-            isUploading={uploadImage.isPending && uploadImage.variables?.productId === p.id}
-          />
-        ))}
-      </ul>
+            {productImagePreview && (
+              <img
+                src={productImagePreview}
+                alt="Prévia"
+                className="mt-2 h-20 w-20 rounded-lg object-cover ring-1 ring-zinc-200"
+              />
+            )}
+          </div>
+          <div className="md:col-span-2">
+            <Button type="submit" disabled={createProduct.isPending}>
+              <Plus className="h-4 w-4" />
+              {createProduct.isPending ? 'Salvando...' : 'Adicionar produto'}
+            </Button>
+          </div>
+        </form>
+      </Card>
+
+      {products.length === 0 ? (
+        <EmptyState
+          icon={<Package className="h-5 w-5" />}
+          title="Nenhum produto"
+          description="Adicione produtos para montar o cardápio digital."
+        />
+      ) : (
+        <ul className="divide-y divide-zinc-100 overflow-hidden rounded-xl border border-zinc-200 bg-white">
+          {products.map((p: AdminProduct) => (
+            <ProductRow
+              key={p.id}
+              product={p}
+              categoryName={categoryMap.get(p.categoryId) ?? '—'}
+              onToggle={(id, available) => toggleProduct.mutate({ id, available })}
+              onUploadImage={(id, file) => uploadImage.mutate({ productId: id, file })}
+              isToggling={toggleProduct.isPending}
+              isUploading={uploadImage.isPending && uploadImage.variables?.productId === p.id}
+            />
+          ))}
+        </ul>
+      )}
     </div>
   );
 });

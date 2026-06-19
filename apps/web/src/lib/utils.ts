@@ -12,6 +12,19 @@ export function formatTime(date: string) {
   }).format(new Date(date));
 }
 
+export function formatRelativeTime(date: string) {
+  const diffMs = Date.now() - new Date(date).getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+
+  if (diffMin < 1) return 'agora';
+  if (diffMin === 1) return 'há 1 min';
+  if (diffMin < 60) return `há ${diffMin} min`;
+
+  const diffHours = Math.floor(diffMin / 60);
+  if (diffHours === 1) return 'há 1 h';
+  return `há ${diffHours} h`;
+}
+
 export function playNewOrderSound() {
   try {
     const ctx = new AudioContext();

@@ -6,16 +6,25 @@ import {
   OrderItemStatus,
   OrderStatus,
 } from '@pedidonamesa/shared';
-import { formatCurrency, formatTime } from '../../lib/utils';
+import { Check, Circle, Clock } from 'lucide-react';
+import { formatCurrency, formatRelativeTime } from '../../lib/utils';
+import { ORDER_STATUS_ACCENT, ORDER_STATUS_BADGE } from '../../lib/status-colors';
+import { cn } from '../../lib/cn';
+import { Badge } from '../ui/Badge';
+import { Button } from '../ui/Button';
 
-const STATUS_COLORS: Record<OrderStatus, string> = {
-  [OrderStatus.PENDING]: 'bg-amber-100 text-amber-900 border-amber-300',
-  [OrderStatus.CONFIRMED]: 'bg-blue-100 text-blue-900 border-blue-300',
-  [OrderStatus.PREPARING]: 'bg-orange-100 text-orange-900 border-orange-300',
-  [OrderStatus.READY]: 'bg-emerald-100 text-emerald-900 border-emerald-300',
-  [OrderStatus.DELIVERED]: 'bg-stone-100 text-stone-600 border-stone-300',
-  [OrderStatus.CANCELLED]: 'bg-red-100 text-red-900 border-red-300',
-};
+function ItemStatusIcon({ status }: { status: OrderItemStatus }) {
+  if (status === OrderItemStatus.DELIVERED) {
+    return <Check className="h-4 w-4 text-emerald-600" />;
+  }
+  if (status === OrderItemStatus.READY) {
+    return <Check className="h-4 w-4 text-emerald-500" />;
+  }
+  if (status === OrderItemStatus.PREPARING) {
+    return <Clock className="h-4 w-4 text-orange-500" />;
+  }
+  return <Circle className="h-4 w-4 text-zinc-300" />;
+}
 
 interface OrderCardProps {
   order: OrderDto;
@@ -35,113 +44,143 @@ export const OrderCard = memo(function OrderCard({
     : `Mesa ${order.tableNumber}`;
 
   return (
-    <article className={`card border-2 p-4 ${STATUS_COLORS[order.status]}`}>
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h2 className="text-2xl font-black">{tableName}</h2>
-          <p className="text-sm opacity-80">
-            {formatTime(order.createdAt)} · {ORDER_STATUS_LABELS[order.status]}
-          </p>
+    <article
+      className={cn(
+        'overflow-hidden rounded-xl border border-zinc-200 border-l-4 bg-white',
+        ORDER_STATUS_ACCENT[order.status],
+      )}
+    >
+      <div className="border-b border-zinc-100 px-4 py-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-2xl font-semibold text-zinc-900">{tableName}</h2>
+            <p className="mt-0.5 text-sm text-zinc-500">
+              {formatRelativeTime(order.createdAt)} · {ORDER_STATUS_LABELS[order.status]}
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-lg font-semibold text-zinc-900">{formatCurrency(order.total)}</p>
+            <Badge variant={ORDER_STATUS_BADGE[order.status]} className="mt-1">
+              {ORDER_STATUS_LABELS[order.status]}
+            </Badge>
+          </div>
         </div>
-        <p className="text-xl font-bold">{formatCurrency(order.total)}</p>
+
+        {order.notes && (
+          <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800 ring-1 ring-amber-200">
+            Obs: {order.notes}
+          </p>
+        )}
       </div>
 
-      {order.notes && (
-        <p className="mt-3 rounded-lg bg-white/60 px-3 py-2 text-sm font-medium">
-          Obs: {order.notes}
-        </p>
-      )}
-
-      <ul className="mt-4 space-y-2">
+      <ul className="divide-y divide-zinc-100 px-4">
         {order.items.map((item) => (
-          <li key={item.id} className="rounded-xl bg-white/70 p-3">
-            <div className="flex items-start justify-between gap-2">
+          <li key={item.id} className="flex items-start justify-between gap-3 py-3">
+            <div className="flex gap-3">
+              <div className="mt-0.5">
+                <ItemStatusIcon status={item.status} />
+              </div>
               <div>
-                <p className="font-bold">
+                <p className="font-medium text-zinc-900">
                   {item.quantity}x {item.productName}
                 </p>
-                {item.notes && <p className="text-sm text-stone-600">Obs: {item.notes}</p>}
-                <p className="text-xs text-stone-500">{ORDER_ITEM_STATUS_LABELS[item.status]}</p>
+                {item.notes && (
+                  <p className="mt-0.5 text-sm text-zinc-500">Obs: {item.notes}</p>
+                )}
+                <p className="mt-0.5 text-xs text-zinc-400">
+                  {ORDER_ITEM_STATUS_LABELS[item.status]}
+                </p>
               </div>
-              <div className="flex flex-wrap gap-1">
-                {item.status === OrderItemStatus.PENDING && (
-                  <button
-                    className="btn-secondary px-2 py-1 text-xs"
-                    disabled={isUpdating}
-                    onClick={() => onUpdateItem(item.id, OrderItemStatus.PREPARING)}
-                  >
-                    Preparar
-                  </button>
-                )}
-                {item.status === OrderItemStatus.PREPARING && (
-                  <button
-                    className="btn-success px-2 py-1 text-xs"
-                    disabled={isUpdating}
-                    onClick={() => onUpdateItem(item.id, OrderItemStatus.READY)}
-                  >
-                    Pronto
-                  </button>
-                )}
-                {item.status === OrderItemStatus.READY && (
-                  <button
-                    className="btn-primary px-2 py-1 text-xs"
-                    disabled={isUpdating}
-                    onClick={() => onUpdateItem(item.id, OrderItemStatus.DELIVERED)}
-                  >
-                    Entregue
-                  </button>
-                )}
-              </div>
+            </div>
+            <div className="flex shrink-0 flex-col gap-1.5">
+              {item.status === OrderItemStatus.PENDING && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="min-h-[44px]"
+                  disabled={isUpdating}
+                  onClick={() => onUpdateItem(item.id, OrderItemStatus.PREPARING)}
+                >
+                  Preparar
+                </Button>
+              )}
+              {item.status === OrderItemStatus.PREPARING && (
+                <Button
+                  variant="success"
+                  size="sm"
+                  className="min-h-[44px]"
+                  disabled={isUpdating}
+                  onClick={() => onUpdateItem(item.id, OrderItemStatus.READY)}
+                >
+                  Pronto
+                </Button>
+              )}
+              {item.status === OrderItemStatus.READY && (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  className="min-h-[44px]"
+                  disabled={isUpdating}
+                  onClick={() => onUpdateItem(item.id, OrderItemStatus.DELIVERED)}
+                >
+                  Entregue
+                </Button>
+              )}
             </div>
           </li>
         ))}
       </ul>
 
-      <div className="mt-4 flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 border-t border-zinc-100 p-4">
         {order.status === OrderStatus.PENDING && (
-          <button
-            className="btn-secondary"
+          <Button
+            variant="outline"
+            className="min-h-[44px]"
             disabled={isUpdating}
             onClick={() => onUpdateOrder(order.id, OrderStatus.CONFIRMED)}
           >
             Confirmar
-          </button>
+          </Button>
         )}
         {(order.status === OrderStatus.PENDING || order.status === OrderStatus.CONFIRMED) && (
-          <button
-            className="btn-primary"
+          <Button
+            variant="primary"
+            className="min-h-[44px]"
             disabled={isUpdating}
             onClick={() => onUpdateOrder(order.id, OrderStatus.PREPARING)}
           >
             Iniciar preparo
-          </button>
+          </Button>
         )}
         {order.status === OrderStatus.PREPARING && (
-          <button
-            className="btn-success"
+          <Button
+            variant="success"
+            className="min-h-[44px]"
             disabled={isUpdating}
             onClick={() => onUpdateOrder(order.id, OrderStatus.READY)}
           >
             Tudo pronto
-          </button>
+          </Button>
         )}
         {order.status === OrderStatus.READY && (
-          <button
-            className="btn-primary"
+          <Button
+            variant="primary"
+            className="min-h-[44px]"
             disabled={isUpdating}
             onClick={() => onUpdateOrder(order.id, OrderStatus.DELIVERED)}
           >
             Entregue na mesa
-          </button>
+          </Button>
         )}
         {order.status !== OrderStatus.CANCELLED && order.status !== OrderStatus.DELIVERED && (
-          <button
-            className="btn-danger"
+          <Button
+            variant="danger"
+            className="min-h-[44px]"
             disabled={isUpdating}
             onClick={() => onUpdateOrder(order.id, OrderStatus.CANCELLED)}
           >
             Cancelar
-          </button>
+          </Button>
         )}
       </div>
     </article>

@@ -1,9 +1,15 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { QrCode } from 'lucide-react';
 import type { CreateOrderInput, ProductDto } from '@pedidonamesa/shared';
-import { AppShell } from '../components/AppShell';
+import { MenuLayout } from '../components/menu/MenuLayout';
+import { CategoryNav } from '../components/menu/CategoryNav';
 import { CartSidebar } from '../components/menu/CartSidebar';
+import { CartDrawer } from '../components/menu/CartDrawer';
 import { ProductCard } from '../components/menu/ProductCard';
+import { ProductCardSkeleton } from '../components/ui/Skeleton';
+import { Toast } from '../components/ui/Toast';
+import { EmptyState } from '../components/ui/EmptyState';
 import { useMenu, useSubmitOrder } from '../hooks/useMenu';
 
 interface CartItem {
@@ -20,11 +26,54 @@ export function TableMenuPage() {
   const [orderNotes, setOrderNotes] = useState('');
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [activeCategory, setActiveCategory] = useState('');
+
+  const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
 
   const total = useMemo(
     () => cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0),
     [cart],
   );
+
+  const itemCount = useMemo(
+    () => cart.reduce((sum, item) => sum + item.quantity, 0),
+    [cart],
+  );
+
+  useEffect(() => {
+    if (menu?.categories.length && !activeCategory) {
+      setActiveCategory(menu.categories[0].id);
+    }
+  }, [menu, activeCategory]);
+
+  useEffect(() => {
+    if (!menu?.categories.length) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+        if (visible[0]) {
+          setActiveCategory(visible[0].target.id.replace('cat-', ''));
+        }
+      },
+      { rootMargin: '-120px 0px -60% 0px', threshold: [0, 0.25, 0.5] },
+    );
+
+    menu.categories.forEach((cat) => {
+      const el = sectionRefs.current[cat.id];
+      if (el) observer.observe(el);
+    });
+
+    return () => observer.disconnect();
+  }, [menu]);
+
+  const scrollToCategory = useCallback((id: string) => {
+    setActiveCategory(id);
+    sectionRefs.current[id]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, []);
 
   const addToCart = useCallback((product: ProductDto) => {
     setCart((prev) => {
@@ -66,6 +115,7 @@ export function TableMenuPage() {
       onSuccess: () => {
         setCart([]);
         setOrderNotes('');
+        setDrawerOpen(false);
         setSuccess(true);
         setTimeout(() => setSuccess(false), 4000);
       },
@@ -77,19 +127,29 @@ export function TableMenuPage() {
 
   if (isLoading) {
     return (
-      <AppShell title="Cardápio" subtitle="Carregando...">
-        <p className="text-stone-500">Carregando cardápio...</p>
-      </AppShell>
+      <MenuLayout restaurantName="Cardápio" tableLabel="Carregando...">
+        <div className="grid gap-4 sm:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <ProductCardSkeleton key={i} />
+          ))}
+        </div>
+      </MenuLayout>
     );
   }
 
   if (!menu) {
     return (
-      <AppShell title="Mesa não encontrada">
-        <p className="text-red-600">
-          {menuError ? 'Mesa não encontrada' : 'QR Code inválido'}
-        </p>
-      </AppShell>
+      <MenuLayout restaurantName="Mesa não encontrada" tableLabel="">
+        <EmptyState
+          icon={<QrCode className="h-5 w-5" />}
+          title="QR Code inválido"
+          description={
+            menuError
+              ? 'Esta mesa não foi encontrada. Peça ao garçom um novo QR Code.'
+              : 'Não foi possível carregar o cardápio. Verifique o link e tente novamente.'
+          }
+        />
+      </MenuLayout>
     );
   }
 
@@ -97,39 +157,70 @@ export function TableMenuPage() {
     ? `Mesa ${menu.table.number} — ${menu.table.label}`
     : `Mesa ${menu.table.number}`;
 
+  const cartProps = {
+    cart,
+    orderNotes,
+    total,
+    error,
+    submitting: submitOrder.isPending,
+    onNotesChange: setOrderNotes,
+    onUpdateQuantity: updateQuantity,
+    onSubmit: handleSubmitOrder,
+  };
+
   return (
-    <AppShell title={menu.restaurant.name} subtitle={tableLabel}>
-      {success && (
-        <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-800">
-          Pedido enviado! A cozinha já recebeu.
-        </div>
-      )}
+    <>
+      <Toast
+        message="Pedido enviado! A cozinha já recebeu."
+        visible={success}
+        onClose={() => setSuccess(false)}
+      />
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-        <div className="space-y-6">
-          {menu.categories.map((category) => (
-            <section key={category.id}>
-              <h2 className="mb-3 text-lg font-bold">{category.name}</h2>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {category.products.map((product) => (
-                  <ProductCard key={product.id} product={product} onAdd={addToCart} />
-                ))}
-              </div>
-            </section>
-          ))}
-        </div>
+      <MenuLayout
+        restaurantName={menu.restaurant.name}
+        tableLabel={tableLabel}
+        categoryNav={
+          menu.categories.length > 1 ? (
+            <CategoryNav
+              categories={menu.categories.map((c) => ({ id: c.id, name: c.name }))}
+              activeId={activeCategory}
+              onSelect={scrollToCategory}
+            />
+          ) : undefined
+        }
+      >
+        <div className="grid gap-8 lg:grid-cols-[1fr_340px]">
+          <div className="space-y-10">
+            {menu.categories.map((category) => (
+              <section
+                key={category.id}
+                id={`cat-${category.id}`}
+                ref={(el) => {
+                  sectionRefs.current[category.id] = el;
+                }}
+                className="section-scroll"
+              >
+                <h2 className="mb-4 text-lg font-semibold text-zinc-900">{category.name}</h2>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {category.products.map((product) => (
+                    <ProductCard key={product.id} product={product} onAdd={addToCart} />
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
 
-        <CartSidebar
-          cart={cart}
-          orderNotes={orderNotes}
-          total={total}
-          error={error}
-          submitting={submitOrder.isPending}
-          onNotesChange={setOrderNotes}
-          onUpdateQuantity={updateQuantity}
-          onSubmit={handleSubmitOrder}
-        />
-      </div>
-    </AppShell>
+          <CartSidebar {...cartProps} />
+        </div>
+      </MenuLayout>
+
+      <CartDrawer
+        {...cartProps}
+        open={drawerOpen}
+        itemCount={itemCount}
+        onOpen={() => setDrawerOpen(true)}
+        onClose={() => setDrawerOpen(false)}
+      />
+    </>
   );
 }

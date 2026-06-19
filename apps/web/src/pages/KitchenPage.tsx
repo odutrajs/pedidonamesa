@@ -1,7 +1,11 @@
 import { useCallback } from 'react';
+import { ChefHat, LogOut } from 'lucide-react';
 import { OrderStatus, OrderItemStatus } from '@pedidonamesa/shared';
 import { AppShell } from '../components/AppShell';
 import { OrderCard } from '../components/kitchen/OrderCard';
+import { Button } from '../components/ui/Button';
+import { EmptyState } from '../components/ui/EmptyState';
+import { Skeleton } from '../components/ui/Skeleton';
 import { useAuth } from '../context/AuthContext';
 import {
   useKitchenOrders,
@@ -36,18 +40,25 @@ export function KitchenPage() {
       title="Cozinha"
       subtitle={`${orders.length} pedido(s) ativo(s)`}
       actions={
-        <button className="btn-secondary" onClick={logout}>
+        <Button variant="ghost" size="sm" onClick={logout}>
+          <LogOut className="h-4 w-4" />
           Sair
-        </button>
+        </Button>
       }
     >
       {isLoading ? (
-        <p className="text-stone-500">Carregando pedidos...</p>
-      ) : orders.length === 0 ? (
-        <div className="card p-8 text-center">
-          <p className="text-lg font-semibold text-stone-600">Nenhum pedido na cozinha</p>
-          <p className="mt-2 text-sm text-stone-500">Novos pedidos aparecem aqui automaticamente</p>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-64 w-full" />
+          ))}
         </div>
+      ) : orders.length === 0 ? (
+        <EmptyState
+          icon={<ChefHat className="h-5 w-5 animate-pulse" />}
+          title="Aguardando pedidos..."
+          description="Novos pedidos aparecem aqui automaticamente em tempo real."
+          className="rounded-xl border border-zinc-200 bg-white py-16"
+        />
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {orders.map((order) => (

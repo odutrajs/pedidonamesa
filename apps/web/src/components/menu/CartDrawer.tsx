@@ -1,0 +1,94 @@
+import { memo } from 'react';
+import { X } from 'lucide-react';
+import type { ProductDto } from '@pedidonamesa/shared';
+import { formatCurrency } from '../../lib/utils';
+import { CartContent } from './CartSidebar';
+
+interface CartItem {
+  product: ProductDto;
+  quantity: number;
+}
+
+interface CartDrawerProps {
+  open: boolean;
+  cart: CartItem[];
+  orderNotes: string;
+  total: number;
+  itemCount: number;
+  error: string;
+  submitting: boolean;
+  onOpen: () => void;
+  onClose: () => void;
+  onNotesChange: (notes: string) => void;
+  onUpdateQuantity: (productId: string, quantity: number) => void;
+  onSubmit: () => void;
+}
+
+export const CartDrawer = memo(function CartDrawer({
+  open,
+  cart,
+  orderNotes,
+  total,
+  itemCount,
+  error,
+  submitting,
+  onOpen,
+  onClose,
+  onNotesChange,
+  onUpdateQuantity,
+  onSubmit,
+}: CartDrawerProps) {
+  return (
+    <>
+      {itemCount > 0 && !open && (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200 bg-white p-4 shadow-lg lg:hidden">
+          <button
+            type="button"
+            onClick={onOpen}
+            className="flex w-full items-center justify-between rounded-xl bg-zinc-900 px-4 py-3.5 text-white transition active:scale-[0.98]"
+          >
+            <span className="text-sm font-medium">
+              {itemCount} {itemCount === 1 ? 'item' : 'itens'}
+            </span>
+            <span className="text-sm font-semibold">{formatCurrency(total)}</span>
+            <span className="text-sm font-medium">Ver pedido →</span>
+          </button>
+        </div>
+      )}
+
+      {open && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/40"
+            onClick={onClose}
+            aria-label="Fechar carrinho"
+          />
+          <div className="absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-2xl bg-white p-5 pb-8 animate-slide-down">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Seu pedido</h2>
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100"
+                aria-label="Fechar"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <CartContent
+              cart={cart}
+              orderNotes={orderNotes}
+              total={total}
+              error={error}
+              submitting={submitting}
+              onNotesChange={onNotesChange}
+              onUpdateQuantity={onUpdateQuantity}
+              onSubmit={onSubmit}
+            />
+          </div>
+        </div>
+      )}
+    </>
+  );
+});
