@@ -5,6 +5,7 @@ import {
   OrderDto,
   OrderItemStatus,
   OrderStatus,
+  MenuChannel,
 } from '@pedidonamesa/shared';
 import { Clock } from 'lucide-react';
 import { formatCurrency, formatRelativeTime } from '../../lib/utils';
@@ -24,15 +25,19 @@ interface OrderCardProps {
   isUpdating: boolean;
 }
 
-function getPrimaryOrderAction(status: OrderStatus) {
-  switch (status) {
+function getPrimaryOrderAction(order: OrderDto) {
+  switch (order.status) {
     case OrderStatus.PENDING:
     case OrderStatus.CONFIRMED:
       return { label: 'Iniciar preparo', next: OrderStatus.PREPARING, variant: 'primary' as const };
     case OrderStatus.PREPARING:
       return { label: 'Tudo pronto', next: OrderStatus.READY, variant: 'success' as const };
     case OrderStatus.READY:
-      return { label: 'Entregue na mesa', next: OrderStatus.DELIVERED, variant: 'primary' as const };
+      return {
+        label: order.channel === MenuChannel.DELIVERY ? 'Saiu para entrega' : 'Entregue na mesa',
+        next: OrderStatus.DELIVERED,
+        variant: 'primary' as const,
+      };
     default:
       return null;
   }
@@ -57,11 +62,18 @@ export const OrderCard = memo(function OrderCard({
   onUpdateItem,
   isUpdating,
 }: OrderCardProps) {
-  const tableName = order.tableLabel
-    ? `Mesa ${order.tableNumber} — ${order.tableLabel}`
-    : `Mesa ${order.tableNumber}`;
+  const locationLabel =
+    order.channel === MenuChannel.DELIVERY
+      ? order.customerName
+        ? `Delivery — ${order.customerName}`
+        : 'Delivery'
+      : order.tableNumber
+        ? order.tableLabel
+          ? `Mesa ${order.tableNumber} — ${order.tableLabel}`
+          : `Mesa ${order.tableNumber}`
+        : 'Mesa';
 
-  const primaryAction = getPrimaryOrderAction(order.status);
+  const primaryAction = getPrimaryOrderAction(order);
   const canCancel =
     order.status !== OrderStatus.CANCELLED && order.status !== OrderStatus.DELIVERED;
 
@@ -76,7 +88,7 @@ export const OrderCard = memo(function OrderCard({
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">{tableName}</h2>
+              <h2 className="text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">{locationLabel}</h2>
               <Badge variant={ORDER_STATUS_BADGE[order.status]}>
                 {ORDER_STATUS_LABELS[order.status]}
               </Badge>
@@ -94,6 +106,13 @@ export const OrderCard = memo(function OrderCard({
         {order.notes && (
           <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900 ring-1 ring-amber-200 dark:bg-amber-950 dark:text-amber-100 dark:ring-amber-800">
             <span className="font-semibold">Obs:</span> {order.notes}
+          </p>
+        )}
+
+        {order.channel === MenuChannel.DELIVERY && order.deliveryAddress && (
+          <p className="mt-3 rounded-lg bg-zinc-50 px-3 py-2 text-sm text-zinc-700 ring-1 ring-zinc-200 dark:bg-zinc-800 dark:text-zinc-200 dark:ring-zinc-700">
+            <span className="font-semibold">Endereço:</span> {order.deliveryAddress}
+            {order.customerPhone ? ` · ${order.customerPhone}` : ''}
           </p>
         )}
       </header>

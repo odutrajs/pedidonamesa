@@ -8,7 +8,7 @@ import {
   JoinColumn,
   OneToMany,
 } from 'typeorm';
-import { OrderStatus, PaymentMethod, PaymentStatus } from '@pedidonamesa/shared';
+import { OrderStatus, PaymentMethod, PaymentStatus, MenuChannel } from '@pedidonamesa/shared';
 import { Table } from './table.entity';
 import { OrderItem } from './order-item.entity';
 
@@ -17,11 +17,23 @@ export class Order {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
-  tableId: string;
+  @Column({ type: 'enum', enum: MenuChannel, default: MenuChannel.TABLE })
+  channel: MenuChannel;
+
+  @Column({ type: 'varchar', nullable: true })
+  tableId: string | null;
 
   @Column()
   restaurantId: string;
+
+  @Column({ type: 'varchar', nullable: true })
+  customerName: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  customerPhone: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  deliveryAddress: string | null;
 
   @Column({ type: 'enum', enum: OrderStatus, default: OrderStatus.PENDING })
   status: OrderStatus;
@@ -47,9 +59,9 @@ export class Order {
   @Column({ type: 'timestamptz', nullable: true })
   paidAt: Date | null;
 
-  @ManyToOne(() => Table, (table) => table.orders)
+  @ManyToOne(() => Table, (table) => table.orders, { nullable: true })
   @JoinColumn({ name: 'tableId' })
-  table: Table;
+  table: Table | null;
 
   @OneToMany(() => OrderItem, (item) => item.order, { cascade: true })
   items: OrderItem[];

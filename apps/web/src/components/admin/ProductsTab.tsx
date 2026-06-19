@@ -1,12 +1,14 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { ImagePlus, Package, Pencil, Plus } from 'lucide-react';
+import { MenuChannel, MENU_CHANNEL_LABELS } from '@pedidonamesa/shared';
 import {
   useCategories,
   useCreateProduct,
   useProducts,
   useToggleProduct,
   useUpdateProduct,
+  useUpdateProductSuggestions,
   useUploadProductImage,
 } from '../../hooks/useAdmin';
 import { formatCurrency } from '../../lib/utils';
@@ -116,15 +118,27 @@ export const ProductsTab = memo(function ProductsTab() {
   const { data: products = [], isLoading: loadingProducts } = useProducts();
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
+  const updateSuggestions = useUpdateProductSuggestions();
   const uploadImage = useUploadProductImage();
   const toggleProduct = useToggleProduct();
 
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
+  const [suggestedProductIds, setSuggestedProductIds] = useState<string[]>([]);
+  const [productChannels, setProductChannels] = useState<MenuChannel[]>([
+    MenuChannel.TABLE,
+    MenuChannel.DELIVERY,
+  ]);
   const [productImage, setProductImage] = useState<File | null>(null);
   const [productImagePreview, setProductImagePreview] = useState<string | null>(null);
 
   const isEditing = editingProductId !== null;
-  const isSaving = createProduct.isPending || updateProduct.isPending;
+  const isSaving =
+    createProduct.isPending || updateProduct.isPending || updateSuggestions.isPending;
+
+  const suggestionOptions = useMemo(
+    () => products.filter((product: AdminProduct) => product.id !== editingProductId),
+    [products, editingProductId],
+  );
 
   const {
     register,
@@ -161,6 +175,8 @@ export const ProductsTab = memo(function ProductsTab() {
 
   const resetCreateForm = useCallback(() => {
     setEditingProductId(null);
+    setSuggestedProductIds([]);
+    setProductChannels([MenuChannel.TABLE, MenuChannel.DELIVERY]);
     reset({
       name: '',
       price: '',
@@ -173,6 +189,12 @@ export const ProductsTab = memo(function ProductsTab() {
   const startEdit = useCallback(
     (product: AdminProduct) => {
       setEditingProductId(product.id);
+      setSuggestedProductIds(product.suggestedProductIds ?? []);
+      setProductChannels(
+        product.channels?.length
+          ? product.channels
+          : [MenuChannel.TABLE, MenuChannel.DELIVERY],
+      );
       reset(
         {
           name: product.name,
@@ -200,8 +222,15 @@ export const ProductsTab = memo(function ProductsTab() {
   function onSubmit(data: ProductFormValues) {
     if (editingProductId) {
       updateProduct.mutate(
-        { id: editingProductId, data, image: productImage },
-        { onSuccess: () => resetCreateForm() },
+        { id: editingProductId, data, image: productImage, channels: productChannels },
+        {
+          onSuccess: () => {
+            updateSuggestions.mutate(
+              { id: editingProductId, suggestedProductIds },
+              { onSuccess: () => resetCreateForm() },
+            );
+          },
+        },
       );
       return;
     }
@@ -222,7 +251,7 @@ export const ProductsTab = memo(function ProductsTab() {
     );
   }
 
-  const saveError = createProduct.isError || updateProduct.isError;
+  const saveError = createProduct.isError || updateProduct.isError || updateSuggestions.isError;
 
   if (loadingCategories || loadingProducts) {
     return (
@@ -280,6 +309,68 @@ export const ProductsTab = memo(function ProductsTab() {
           </div>
           <Input placeholder="Descrição (opcional)" {...register('description')} />
           <div className="md:col-span-2">
+            <p className="mb-2 text-sm font-medium text-zinc-900 dark:text-zinc-50">Canais de venda</p>
+            <div className="flex flex-wrap gap-4">
+              {Object.values(MenuChannel).map((channel) => (
+                <label
+                  key={channel}
+                  className="flex cursor-pointer items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300"
+                >
+                  <input
+                    type="checkbox"
+                    checked={productChannels.includes(channel)}
+                    disabled={isSaving}
+                    onChange={(event) => {
+                      setProductChannels((current) =>
+                        event.target.checked
+                          ? [...current, channel]
+                          : current.filter((value) => value !== channel),
+                      );
+                    }}
+                  />
+                  {MENU_CHANNEL_LABELS[channel]}
+                </label>
+              ))}
+            </div>
+          </div>
+          {isEditing && suggestionOptions.length > 0 && (
+            <div className="md:col-span-2">
+              <p className="mb-2 text-sm font-medium text-zinc-900 dark:text-zinc-50">
+                Sugerir também
+              </p>
+              <div className="max-h-40 space-y-2 overflow-y-auto rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
+                {suggestionOptions.map((product: AdminProduct) => {
+                  const checked = suggestedProductIds.includes(product.id);
+                  return (
+                    <label
+                      key={product.id}
+                      className="flex cursor-pointer items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        disabled={isSaving}
+                        onChange={(event) => {
+                          setSuggestedProductIds((current) =>
+                            event.target.checked
+                              ? [...current, product.id]
+                              : current.filter((id) => id !== product.id),
+                          );
+                        }}
+                      />
+                      <span>
+                        {product.name}{' '}
+                        <span className="text-zinc-500 dark:text-zinc-400">
+                          ({categoryMap.get(product.categoryId) ?? '—'})
+                        </span>
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          <div className="md:col-span-2">
             <ImageUpload
               value={productImage}
               previewUrl={productImagePreview}
@@ -293,7 +384,7 @@ export const ProductsTab = memo(function ProductsTab() {
             </p>
           )}
           <div className="flex flex-wrap gap-2 md:col-span-2">
-            <Button type="submit" disabled={!isValid || categories.length === 0 || isSaving}>
+            <Button type="submit" disabled={!isValid || categories.length === 0 || isSaving || productChannels.length === 0}>
               {isEditing ? (
                 isSaving ? (
                   'Salvando...'

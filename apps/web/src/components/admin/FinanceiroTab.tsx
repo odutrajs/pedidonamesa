@@ -40,7 +40,7 @@ export function FinanceiroTab() {
                 key={mode}
                 type="button"
                 disabled={updateSettings.isPending}
-                onClick={() => updateSettings.mutate(mode)}
+                onClick={() => updateSettings.mutate({ paymentMode: mode })}
                 className={`rounded-xl border p-4 text-left transition ${
                   selected
                     ? 'border-brand-500 bg-brand-50 ring-1 ring-brand-500/20 dark:border-brand-500 dark:bg-brand-950/50 dark:ring-brand-500/30'

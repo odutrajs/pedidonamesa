@@ -11,10 +11,11 @@ import {
   PaymentStatus,
   PixCheckoutDto,
   StripeCheckoutDto,
+  MenuChannel,
 } from '@pedidonamesa/shared';
 import Stripe from 'stripe';
 import { MercadoPagoConfig, Payment } from 'mercadopago';
-import { Order, Table } from '../entities';
+import { Order, Restaurant, Table } from '../entities';
 import { OrdersService } from '../orders/orders.service';
 
 @Injectable()
@@ -28,6 +29,8 @@ export class PaymentsService {
     private readonly ordersRepo: Repository<Order>,
     @InjectRepository(Table)
     private readonly tablesRepo: Repository<Table>,
+    @InjectRepository(Restaurant)
+    private readonly restaurantsRepo: Repository<Restaurant>,
     private readonly ordersService: OrdersService,
   ) {
     const stripeKey = this.config.get<string>('STRIPE_SECRET_KEY');
@@ -46,11 +49,20 @@ export class PaymentsService {
     return this.config.get<string>('STRIPE_PUBLISHABLE_KEY') ?? null;
   }
 
-  async createStripeCheckout(
-    tableToken: string,
-    orderId: string,
+  async createStripeCheckout(tableToken: string, orderId: string): Promise<StripeCheckoutDto> {
+    const order = await this.getPayableOrder({ kind: 'table', token: tableToken }, orderId);
+    return this.createStripeCheckoutForOrder(order, tableToken);
+  }
+
+  async createStripeCheckoutForDelivery(slug: string, orderId: string): Promise<StripeCheckoutDto> {
+    const order = await this.getPayableOrder({ kind: 'delivery', slug }, orderId);
+    return this.createStripeCheckoutForOrder(order, slug);
+  }
+
+  private async createStripeCheckoutForOrder(
+    order: Order,
+    contextKey: string,
   ): Promise<StripeCheckoutDto> {
-    const order = await this.getPayableOrder(tableToken, orderId);
 
     if (!this.stripe) {
       throw new BadRequestException('Stripe não configurado');
@@ -89,7 +101,7 @@ export class PaymentsService {
       payment_method_types: ['card'],
       metadata: {
         orderId: order.id,
-        tableToken,
+        contextKey,
         restaurantId: order.restaurantId,
       },
     });
@@ -104,7 +116,16 @@ export class PaymentsService {
   }
 
   async createPixCheckout(tableToken: string, orderId: string): Promise<PixCheckoutDto> {
-    const order = await this.getPayableOrder(tableToken, orderId);
+    const order = await this.getPayableOrder({ kind: 'table', token: tableToken }, orderId);
+    return this.createPixCheckoutForOrder(order);
+  }
+
+  async createPixCheckoutForDelivery(slug: string, orderId: string): Promise<PixCheckoutDto> {
+    const order = await this.getPayableOrder({ kind: 'delivery', slug }, orderId);
+    return this.createPixCheckoutForOrder(order);
+  }
+
+  private async createPixCheckoutForOrder(order: Order): Promise<PixCheckoutDto> {
 
     if (!this.mercadoPagoPayment) {
       throw new BadRequestException('Mercado Pago não configurado');
@@ -132,7 +153,7 @@ export class PaymentsService {
     const result = await this.mercadoPagoPayment.create({
       body: {
         transaction_amount: Number(order.total),
-        description: `Pedido mesa — ${order.id.slice(0, 8)}`,
+        description: `Pedido ${order.channel === MenuChannel.DELIVERY ? 'delivery' : 'mesa'} — ${order.id.slice(0, 8)}`,
         payment_method_id: 'pix',
         payer: {
           email: 'cliente@pedidonamesa.com',
@@ -160,7 +181,20 @@ export class PaymentsService {
     orderId: string,
     paymentIntentId: string,
   ) {
-    const order = await this.getPayableOrder(tableToken, orderId);
+    const order = await this.getPayableOrder({ kind: 'table', token: tableToken }, orderId);
+    return this.confirmStripePaymentForOrder(order, paymentIntentId);
+  }
+
+  async confirmStripePaymentForDelivery(
+    slug: string,
+    orderId: string,
+    paymentIntentId: string,
+  ) {
+    const order = await this.getPayableOrder({ kind: 'delivery', slug }, orderId);
+    return this.confirmStripePaymentForOrder(order, paymentIntentId);
+  }
+
+  private async confirmStripePaymentForOrder(order: Order, paymentIntentId: string) {
 
     if (!this.stripe) {
       throw new BadRequestException('Stripe não configurado');
@@ -188,6 +222,17 @@ export class PaymentsService {
   }
 
   async mockPayment(tableToken: string, orderId: string) {
+    return this.mockPaymentForScope({ kind: 'table', token: tableToken }, orderId);
+  }
+
+  async mockPaymentForDelivery(slug: string, orderId: string) {
+    return this.mockPaymentForScope({ kind: 'delivery', slug }, orderId);
+  }
+
+  private async mockPaymentForScope(
+    scope: { kind: 'table'; token: string } | { kind: 'delivery'; slug: string },
+    orderId: string,
+  ) {
     const isProd = this.config.get<string>('NODE_ENV') === 'production';
     const mockEnabled = this.config.get<string>('MOCK_PAYMENTS') === 'true';
 
@@ -195,12 +240,23 @@ export class PaymentsService {
       throw new BadRequestException('Pagamento simulado não disponível');
     }
 
-    const order = await this.getPayableOrder(tableToken, orderId);
+    const order = await this.getPayableOrder(scope, orderId);
     return this.ordersService.markOrderPaid(order.id, PaymentMethod.CARD);
   }
 
   async syncPaymentStatus(tableToken: string, orderId: string) {
-    const order = await this.findOrderForTable(tableToken, orderId);
+    return this.syncPaymentStatusForScope({ kind: 'table', token: tableToken }, orderId);
+  }
+
+  async syncPaymentStatusForDelivery(slug: string, orderId: string) {
+    return this.syncPaymentStatusForScope({ kind: 'delivery', slug }, orderId);
+  }
+
+  private async syncPaymentStatusForScope(
+    scope: { kind: 'table'; token: string } | { kind: 'delivery'; slug: string },
+    orderId: string,
+  ) {
+    const order = await this.findScopedOrder(scope, orderId);
 
     if (order.paymentStatus === PaymentStatus.PAID) {
       return this.buildPaymentStatusResponse(order);
@@ -281,8 +337,11 @@ export class PaymentsService {
     return { received: true };
   }
 
-  private async getPayableOrder(tableToken: string, orderId: string): Promise<Order> {
-    const order = await this.findOrderForTable(tableToken, orderId);
+  private async getPayableOrder(
+    scope: { kind: 'table'; token: string } | { kind: 'delivery'; slug: string },
+    orderId: string,
+  ): Promise<Order> {
+    const order = await this.findScopedOrder(scope, orderId);
 
     if (order.paymentStatus === PaymentStatus.NOT_REQUIRED) {
       throw new BadRequestException('Este pedido não exige pagamento antecipado');
@@ -295,17 +354,44 @@ export class PaymentsService {
     return order;
   }
 
-  private async findOrderForTable(tableToken: string, orderId: string): Promise<Order> {
-    const table = await this.tablesRepo.findOne({
-      where: { token: tableToken, active: true },
+  private async findScopedOrder(
+    scope: { kind: 'table'; token: string } | { kind: 'delivery'; slug: string },
+    orderId: string,
+  ): Promise<Order> {
+    if (scope.kind === 'table') {
+      const table = await this.tablesRepo.findOne({
+        where: { token: scope.token, active: true },
+      });
+
+      if (!table) {
+        throw new NotFoundException('Mesa não encontrada');
+      }
+
+      const order = await this.ordersRepo.findOne({
+        where: { id: orderId, tableId: table.id },
+      });
+
+      if (!order) {
+        throw new NotFoundException('Pedido não encontrado');
+      }
+
+      return order;
+    }
+
+    const restaurant = await this.restaurantsRepo.findOne({
+      where: { slug: scope.slug, active: true },
     });
 
-    if (!table) {
-      throw new NotFoundException('Mesa não encontrada');
+    if (!restaurant) {
+      throw new NotFoundException('Restaurante não encontrado');
     }
 
     const order = await this.ordersRepo.findOne({
-      where: { id: orderId, tableId: table.id },
+      where: {
+        id: orderId,
+        restaurantId: restaurant.id,
+        channel: MenuChannel.DELIVERY,
+      },
     });
 
     if (!order) {

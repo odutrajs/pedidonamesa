@@ -14,6 +14,7 @@ import { User } from '../entities/user.entity';
 import { OrdersService } from './orders.service';
 import {
   CreateOrderDto,
+  CreateDeliveryOrderDto,
   UpdateOrderItemStatusDto,
   UpdateOrderStatusDto,
 } from './dto/order.dto';
@@ -25,6 +26,11 @@ export class OrdersController {
   @Post('mesa/:token')
   createFromTable(@Param('token') token: string, @Body() dto: CreateOrderDto) {
     return this.ordersService.createFromTableToken(token, dto);
+  }
+
+  @Post('entrega/:slug')
+  createFromDelivery(@Param('slug') slug: string, @Body() dto: CreateDeliveryOrderDto) {
+    return this.ordersService.createFromDeliverySlug(slug, dto);
   }
 
   @UseGuards(JwtAuthGuard)

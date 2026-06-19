@@ -1,8 +1,8 @@
 import { memo } from 'react';
 import { X } from 'lucide-react';
-import type { ProductDto } from '@pedidonamesa/shared';
+import type { ProductDto, UpsellSuggestionDto } from '@pedidonamesa/shared';
 import { formatCurrency } from '../../lib/utils';
-import { CartContent } from './CartSidebar';
+import { CartContent, type DeliveryFormValues } from './CartSidebar';
 
 interface CartItem {
   product: ProductDto;
@@ -17,10 +17,16 @@ interface CartDrawerProps {
   itemCount: number;
   error: string;
   submitting: boolean;
+  upsellSuggestions?: UpsellSuggestionDto[];
+  deliveryFields?: {
+    values: DeliveryFormValues;
+    onChange: (field: keyof DeliveryFormValues, value: string) => void;
+  };
   onOpen: () => void;
   onClose: () => void;
   onNotesChange: (notes: string) => void;
   onUpdateQuantity: (productId: string, quantity: number) => void;
+  onAddProduct?: (product: ProductDto) => void;
   onSubmit: () => void;
 }
 
@@ -32,10 +38,13 @@ export const CartDrawer = memo(function CartDrawer({
   itemCount,
   error,
   submitting,
+  upsellSuggestions,
+  deliveryFields,
   onOpen,
   onClose,
   onNotesChange,
   onUpdateQuantity,
+  onAddProduct,
   onSubmit,
 }: CartDrawerProps) {
   return (
@@ -82,8 +91,12 @@ export const CartDrawer = memo(function CartDrawer({
               total={total}
               error={error}
               submitting={submitting}
+              showTitle={false}
+              upsellSuggestions={upsellSuggestions}
+              deliveryFields={deliveryFields}
               onNotesChange={onNotesChange}
               onUpdateQuantity={onUpdateQuantity}
+              onAddProduct={onAddProduct}
               onSubmit={onSubmit}
             />
           </div>

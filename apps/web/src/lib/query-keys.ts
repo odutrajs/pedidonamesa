@@ -4,6 +4,7 @@ export const queryKeys = {
   tables: ['admin', 'tables'] as const,
   orders: ['admin', 'orders'] as const,
   settings: ['admin', 'settings'] as const,
-  menu: (token: string) => ['menu', token] as const,
+  menuTable: (token: string) => ['menu', 'table', token] as const,
+  menuDelivery: (slug: string) => ['menu', 'delivery', slug] as const,
   kitchenOrders: ['kitchen', 'orders'] as const,
 };

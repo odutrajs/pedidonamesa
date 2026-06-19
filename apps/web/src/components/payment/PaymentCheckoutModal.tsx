@@ -9,6 +9,7 @@ import {
   useCreateStripeCheckout,
   useMockPayment,
   usePaymentStatus,
+  type OrderPaymentContext,
 } from '../../hooks/usePayment';
 import { Button } from '../ui/Button';
 import { PixCheckoutView } from './PixCheckoutView';
@@ -18,7 +19,7 @@ type PaymentTab = 'card' | 'pix';
 
 interface PaymentCheckoutModalProps {
   open: boolean;
-  tableToken: string;
+  paymentContext: OrderPaymentContext;
   orderId: string;
   total: number;
   stripePublishableKey: string | null;
@@ -28,7 +29,7 @@ interface PaymentCheckoutModalProps {
 
 export function PaymentCheckoutModal({
   open,
-  tableToken,
+  paymentContext,
   orderId,
   total,
   stripePublishableKey,
@@ -44,11 +45,15 @@ export function PaymentCheckoutModal({
   const stripeLoadStarted = useRef(false);
   const pixLoadStarted = useRef(false);
 
-  const createStripe = useCreateStripeCheckout(tableToken);
-  const createPix = useCreatePixCheckout(tableToken);
-  const confirmStripe = useConfirmStripePayment(tableToken);
-  const mockPayment = useMockPayment(tableToken);
-  const paymentStatus = usePaymentStatus(tableToken, orderId, open && tab === 'pix' && !!pixData);
+  const createStripe = useCreateStripeCheckout(open ? paymentContext : undefined);
+  const createPix = useCreatePixCheckout(open ? paymentContext : undefined);
+  const confirmStripe = useConfirmStripePayment(open ? paymentContext : undefined);
+  const mockPayment = useMockPayment(open ? paymentContext : undefined);
+  const paymentStatus = usePaymentStatus(
+    open ? paymentContext : undefined,
+    orderId,
+    open && tab === 'pix' && !!pixData,
+  );
 
   useEffect(() => {
     if (paymentStatus.data?.paymentStatus === PaymentStatus.PAID) {

@@ -35,6 +35,9 @@ export class Product {
   @Column()
   categoryId: string;
 
+  @Column('simple-array', { default: 'TABLE,DELIVERY' })
+  channels: string[];
+
   @ManyToOne(() => Category, (category) => category.products)
   @JoinColumn({ name: 'categoryId' })
   category: Category;

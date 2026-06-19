@@ -2,7 +2,9 @@ import { memo, useMemo, useState } from 'react';
 import { ClipboardList } from 'lucide-react';
 import {
   KITCHEN_ACTIVE_STATUSES,
+  MENU_CHANNEL_LABELS,
   ORDER_STATUS_LABELS,
+  MenuChannel,
   OrderDto,
   OrderStatus,
 } from '@pedidonamesa/shared';
@@ -41,16 +43,23 @@ function summarizeItems(order: OrderDto) {
 }
 
 const OrderRow = memo(function OrderRow({ order }: { order: OrderDto }) {
-  const tableName = order.tableLabel
-    ? `Mesa ${order.tableNumber} — ${order.tableLabel}`
-    : `Mesa ${order.tableNumber}`;
+  const locationLabel =
+    order.channel === MenuChannel.DELIVERY
+      ? order.customerName
+        ? `${MENU_CHANNEL_LABELS[MenuChannel.DELIVERY]} — ${order.customerName}`
+        : MENU_CHANNEL_LABELS[MenuChannel.DELIVERY]
+      : order.tableNumber
+        ? order.tableLabel
+          ? `Mesa ${order.tableNumber} — ${order.tableLabel}`
+          : `Mesa ${order.tableNumber}`
+        : 'Mesa';
 
   return (
     <li className="px-4 py-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="font-medium text-zinc-900 dark:text-zinc-50">{tableName}</p>
+            <p className="font-medium text-zinc-900 dark:text-zinc-50">{locationLabel}</p>
             <Badge variant={ORDER_STATUS_BADGE[order.status]}>
               {ORDER_STATUS_LABELS[order.status]}
             </Badge>

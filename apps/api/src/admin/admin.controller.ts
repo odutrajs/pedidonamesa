@@ -7,6 +7,7 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   Req,
   UploadedFile,
   UseGuards,
@@ -24,10 +25,11 @@ import {
   CreateTableDto,
   UpdateCategoryDto,
   UpdateProductDto,
+  UpdateProductSuggestionsDto,
+  UpdateRestaurantSettingsDto,
   UpdateTableDto,
   ReorderCategoriesDto,
 } from './dto/admin.dto';
-import { UpdatePaymentSettingsDto } from '../payments/dto/payment.dto';
 
 const imageUploadOptions = {
   limits: { fileSize: 5 * 1024 * 1024 },
@@ -137,6 +139,16 @@ export class AdminController {
     return this.adminService.deleteProduct(id, req.user.restaurantId);
   }
 
+  @Put('products/:id/suggestions')
+  updateProductSuggestions(
+    @Param('id') id: string,
+    @Req() req: { user: User },
+    @Body() dto: UpdateProductSuggestionsDto,
+  ) {
+    assertRole(req.user, [UserRole.ADMIN]);
+    return this.adminService.updateProductSuggestions(id, req.user.restaurantId, dto);
+  }
+
   @Get('tables')
   getTables(@Req() req: { user: User }) {
     assertRole(req.user, [UserRole.ADMIN]);
@@ -172,7 +184,7 @@ export class AdminController {
   }
 
   @Patch('settings')
-  updateSettings(@Req() req: { user: User }, @Body() dto: UpdatePaymentSettingsDto) {
+  updateSettings(@Req() req: { user: User }, @Body() dto: UpdateRestaurantSettingsDto) {
     assertRole(req.user, [UserRole.ADMIN]);
     return this.adminService.updateRestaurantSettings(req.user.restaurantId, dto);
   }

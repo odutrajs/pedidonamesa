@@ -10,6 +10,9 @@ const LoginPage = lazy(() =>
 const TableMenuPage = lazy(() =>
   import('./pages/TableMenuPage').then((m) => ({ default: m.TableMenuPage })),
 );
+const DeliveryMenuPage = lazy(() =>
+  import('./pages/DeliveryMenuPage').then((m) => ({ default: m.DeliveryMenuPage })),
+);
 const KitchenPage = lazy(() =>
   import('./pages/KitchenPage').then((m) => ({ default: m.KitchenPage })),
 );
@@ -32,6 +35,7 @@ export function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/mesa/:token" element={<TableMenuPage />} />
+            <Route path="/entrega/:slug" element={<DeliveryMenuPage />} />
 
             <Route element={<ProtectedRoute roles={['ADMIN', 'KITCHEN', 'WAITER']} />}>
               <Route path="/cozinha" element={<KitchenPage />} />

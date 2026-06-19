@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { OrderDto } from '@pedidonamesa/shared';
+import type { MenuChannel, OrderDto } from '@pedidonamesa/shared';
 import { http, withAuth } from '../lib/axios';
 import { parsePriceInput } from '../lib/utils';
 import { queryKeys } from '../lib/query-keys';
@@ -181,10 +181,12 @@ export function useUpdateProduct() {
       id,
       data,
       image,
+      channels,
     }: {
       id: string;
       data: ProductFormValues;
       image: File | null;
+      channels?: MenuChannel[];
     }) => {
       const product = await http
         .patch<AdminProduct>(
@@ -194,6 +196,7 @@ export function useUpdateProduct() {
             price: parsePriceInput(data.price),
             categoryId: data.categoryId,
             description: data.description?.trim() || undefined,
+            channels,
           },
           withAuth(token),
         )
@@ -207,6 +210,25 @@ export function useUpdateProduct() {
 
       return product;
     },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.products });
+    },
+  });
+}
+
+export function useUpdateProductSuggestions() {
+  const { token } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, suggestedProductIds }: { id: string; suggestedProductIds: string[] }) =>
+      http
+        .put<{ suggestedProductIds: string[] }>(
+          `/admin/products/${id}/suggestions`,
+          { suggestedProductIds },
+          withAuth(token),
+        )
+        .then((r) => r.data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.products });
     },

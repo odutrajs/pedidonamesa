@@ -1,18 +1,20 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
-import { Category, Product, Restaurant, Table } from '../entities';
+import { Category, Product, ProductSuggestion, Restaurant, Table } from '../entities';
 import { StorageService } from '../storage/storage.service';
+import { MenuChannel, parseProductChannels } from '@pedidonamesa/shared';
 import {
   CreateCategoryDto,
   CreateProductDto,
   CreateTableDto,
   UpdateCategoryDto,
   UpdateProductDto,
+  UpdateProductSuggestionsDto,
+  UpdateRestaurantSettingsDto,
   UpdateTableDto,
 } from './dto/admin.dto';
-import { UpdatePaymentSettingsDto } from '../payments/dto/payment.dto';
 
 @Injectable()
 export class AdminService {
@@ -25,6 +27,8 @@ export class AdminService {
     private readonly tablesRepo: Repository<Table>,
     @InjectRepository(Restaurant)
     private readonly restaurantsRepo: Repository<Restaurant>,
+    @InjectRepository(ProductSuggestion)
+    private readonly suggestionsRepo: Repository<ProductSuggestion>,
     private readonly storage: StorageService,
   ) {}
 
@@ -92,13 +96,33 @@ export class AdminService {
     return { ok: true };
   }
 
-  getProducts(restaurantId: string) {
-    return this.productsRepo
+  async getProducts(restaurantId: string) {
+    const products = await this.productsRepo
       .createQueryBuilder('product')
       .innerJoin('product.category', 'category')
       .where('category.restaurantId = :restaurantId', { restaurantId })
       .orderBy('product.sortOrder', 'ASC')
       .getMany();
+
+    if (products.length === 0) return [];
+
+    const suggestions = await this.suggestionsRepo.find({
+      where: { sourceProductId: In(products.map((product) => product.id)) },
+      order: { sortOrder: 'ASC' },
+    });
+
+    const suggestedBySource = new Map<string, string[]>();
+    for (const suggestion of suggestions) {
+      const list = suggestedBySource.get(suggestion.sourceProductId) ?? [];
+      list.push(suggestion.suggestedProductId);
+      suggestedBySource.set(suggestion.sourceProductId, list);
+    }
+
+    return products.map((product) => ({
+      ...product,
+      suggestedProductIds: suggestedBySource.get(product.id) ?? [],
+      channels: parseProductChannels(product.channels),
+    }));
   }
 
   async createProduct(
@@ -114,6 +138,9 @@ export class AdminService {
     const product = this.productsRepo.create({
       ...dto,
       sortOrder: dto.sortOrder ?? 0,
+      channels: dto.channels?.length
+        ? dto.channels
+        : [MenuChannel.TABLE, MenuChannel.DELIVERY],
     });
 
     if (file) {
@@ -185,6 +212,52 @@ export class AdminService {
     return { ok: true };
   }
 
+  async updateProductSuggestions(
+    productId: string,
+    restaurantId: string,
+    dto: UpdateProductSuggestionsDto,
+  ) {
+    const product = await this.productsRepo
+      .createQueryBuilder('product')
+      .innerJoin('product.category', 'category')
+      .where('product.id = :id', { id: productId })
+      .andWhere('category.restaurantId = :restaurantId', { restaurantId })
+      .getOne();
+
+    if (!product) throw new NotFoundException('Produto não encontrado');
+
+    const uniqueIds = [...new Set(dto.suggestedProductIds)].filter((id) => id !== productId);
+
+    if (uniqueIds.length > 0) {
+      const suggestedProducts = await this.productsRepo
+        .createQueryBuilder('product')
+        .innerJoin('product.category', 'category')
+        .where('product.id IN (:...ids)', { ids: uniqueIds })
+        .andWhere('category.restaurantId = :restaurantId', { restaurantId })
+        .getMany();
+
+      if (suggestedProducts.length !== uniqueIds.length) {
+        throw new BadRequestException('Um ou mais produtos sugeridos são inválidos');
+      }
+    }
+
+    await this.suggestionsRepo.delete({ sourceProductId: productId });
+
+    if (uniqueIds.length > 0) {
+      await this.suggestionsRepo.save(
+        uniqueIds.map((suggestedProductId, index) =>
+          this.suggestionsRepo.create({
+            sourceProductId: productId,
+            suggestedProductId,
+            sortOrder: index,
+          }),
+        ),
+      );
+    }
+
+    return { suggestedProductIds: uniqueIds };
+  }
+
   getTables(restaurantId: string) {
     return this.tablesRepo.find({
       where: { restaurantId },
@@ -222,21 +295,72 @@ export class AdminService {
     return {
       id: restaurant.id,
       name: restaurant.name,
+      slug: restaurant.slug,
       paymentMode: restaurant.paymentMode,
+      upsellDrinkCategoryId: restaurant.upsellDrinkCategoryId,
+      upsellFoodOnlyEnabled: restaurant.upsellFoodOnlyEnabled,
+      upsellFoodOnlyCategoryId: restaurant.upsellFoodOnlyCategoryId,
+      upsellDrinksOnlyEnabled: restaurant.upsellDrinksOnlyEnabled,
+      upsellDrinksOnlyCategoryId: restaurant.upsellDrinksOnlyCategoryId,
     };
   }
 
-  async updateRestaurantSettings(restaurantId: string, dto: UpdatePaymentSettingsDto) {
+  private async assertCategory(restaurantId: string, categoryId: string, label: string) {
+    const category = await this.categoriesRepo.findOne({
+      where: { id: categoryId, restaurantId },
+    });
+    if (!category) throw new BadRequestException(`${label} inválida`);
+  }
+
+  async updateRestaurantSettings(restaurantId: string, dto: UpdateRestaurantSettingsDto) {
     const restaurant = await this.restaurantsRepo.findOne({ where: { id: restaurantId } });
     if (!restaurant) throw new NotFoundException('Restaurante não encontrado');
 
-    restaurant.paymentMode = dto.paymentMode;
+    if (dto.paymentMode !== undefined) {
+      restaurant.paymentMode = dto.paymentMode;
+    }
+
+    if (dto.upsellFoodOnlyEnabled !== undefined) {
+      restaurant.upsellFoodOnlyEnabled = dto.upsellFoodOnlyEnabled;
+    }
+
+    if (dto.upsellDrinksOnlyEnabled !== undefined) {
+      restaurant.upsellDrinksOnlyEnabled = dto.upsellDrinksOnlyEnabled;
+    }
+
+    if (dto.upsellDrinkCategoryId !== undefined) {
+      if (dto.upsellDrinkCategoryId) {
+        await this.assertCategory(restaurantId, dto.upsellDrinkCategoryId, 'Categoria de bebidas');
+      }
+      restaurant.upsellDrinkCategoryId = dto.upsellDrinkCategoryId;
+    }
+
+    if (dto.upsellFoodOnlyCategoryId !== undefined) {
+      if (dto.upsellFoodOnlyCategoryId) {
+        await this.assertCategory(restaurantId, dto.upsellFoodOnlyCategoryId, 'Categoria de upsell');
+      }
+      restaurant.upsellFoodOnlyCategoryId = dto.upsellFoodOnlyCategoryId;
+    }
+
+    if (dto.upsellDrinksOnlyCategoryId !== undefined) {
+      if (dto.upsellDrinksOnlyCategoryId) {
+        await this.assertCategory(restaurantId, dto.upsellDrinksOnlyCategoryId, 'Categoria de upsell');
+      }
+      restaurant.upsellDrinksOnlyCategoryId = dto.upsellDrinksOnlyCategoryId;
+    }
+
     await this.restaurantsRepo.save(restaurant);
 
     return {
       id: restaurant.id,
       name: restaurant.name,
+      slug: restaurant.slug,
       paymentMode: restaurant.paymentMode,
+      upsellDrinkCategoryId: restaurant.upsellDrinkCategoryId,
+      upsellFoodOnlyEnabled: restaurant.upsellFoodOnlyEnabled,
+      upsellFoodOnlyCategoryId: restaurant.upsellFoodOnlyCategoryId,
+      upsellDrinksOnlyEnabled: restaurant.upsellDrinksOnlyEnabled,
+      upsellDrinksOnlyCategoryId: restaurant.upsellDrinksOnlyCategoryId,
     };
   }
 }

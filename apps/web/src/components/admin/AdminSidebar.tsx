@@ -4,6 +4,7 @@ import {
   ChevronDown,
   ClipboardList,
   Package,
+  ShoppingBag,
   UtensilsCrossed,
   Wallet,
 } from 'lucide-react';
@@ -24,6 +25,7 @@ const MENU_ITEMS = [
       { label: 'Categorias', path: '/admin/cardapio/categorias' },
       { label: 'Produtos', path: '/admin/cardapio/produtos' },
       { label: 'Mesas', path: '/admin/cardapio/mesas' },
+      { label: 'Delivery', path: '/admin/cardapio/delivery' },
     ],
   },
   {
@@ -32,6 +34,12 @@ const MENU_ITEMS = [
     icon: Package,
     path: '/admin/estoque',
     disabled: true,
+  },
+  {
+    id: 'carrinho',
+    label: 'Carrinho',
+    icon: ShoppingBag,
+    path: '/admin/carrinho',
   },
   {
     id: 'financeiro',

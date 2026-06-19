@@ -14,12 +14,16 @@ export function mapOrderItem(item: OrderItem): OrderItemDto {
 }
 
 export function mapOrder(order: Order, table?: Table): OrderDto {
-  const resolvedTable = table ?? order.table;
+  const resolvedTable = table ?? order.table ?? undefined;
   return {
     id: order.id,
+    channel: order.channel,
     tableId: order.tableId,
-    tableNumber: resolvedTable?.number ?? 0,
+    tableNumber: resolvedTable?.number ?? null,
     tableLabel: resolvedTable?.label ?? null,
+    customerName: order.customerName,
+    customerPhone: order.customerPhone,
+    deliveryAddress: order.deliveryAddress,
     status: order.status,
     notes: order.notes,
     total: Number(order.total),

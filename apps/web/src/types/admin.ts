@@ -1,3 +1,5 @@
+import type { MenuChannel } from '@pedidonamesa/shared';
+
 export interface Category {
   id: string;
   name: string;
@@ -15,6 +17,8 @@ export interface AdminProduct {
   categoryId: string;
   available: boolean;
   sortOrder: number;
+  suggestedProductIds: string[];
+  channels: MenuChannel[];
 }
 
 export interface TableRow {

@@ -31,6 +31,21 @@ export class Restaurant {
   @Column({ type: 'enum', enum: PaymentMode, default: PaymentMode.PAY_AFTER })
   paymentMode: PaymentMode;
 
+  @Column({ default: false })
+  upsellFoodOnlyEnabled: boolean;
+
+  @Column({ type: 'varchar', nullable: true })
+  upsellDrinkCategoryId: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  upsellFoodOnlyCategoryId: string | null;
+
+  @Column({ default: false })
+  upsellDrinksOnlyEnabled: boolean;
+
+  @Column({ type: 'varchar', nullable: true })
+  upsellDrinksOnlyCategoryId: string | null;
+
   @OneToMany(() => User, (user) => user.restaurant)
   users: User[];
 

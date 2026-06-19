@@ -48,6 +48,38 @@ export class PaymentsController {
     return this.paymentsService.syncPaymentStatus(token, orderId);
   }
 
+  @Post('entrega/:slug/orders/:orderId/stripe')
+  createStripeCheckoutDelivery(
+    @Param('slug') slug: string,
+    @Param('orderId') orderId: string,
+  ) {
+    return this.paymentsService.createStripeCheckoutForDelivery(slug, orderId);
+  }
+
+  @Post('entrega/:slug/orders/:orderId/pix')
+  createPixCheckoutDelivery(@Param('slug') slug: string, @Param('orderId') orderId: string) {
+    return this.paymentsService.createPixCheckoutForDelivery(slug, orderId);
+  }
+
+  @Post('entrega/:slug/orders/:orderId/confirm-stripe')
+  confirmStripePaymentDelivery(
+    @Param('slug') slug: string,
+    @Param('orderId') orderId: string,
+    @Body() dto: ConfirmStripePaymentDto,
+  ) {
+    return this.paymentsService.confirmStripePaymentForDelivery(slug, orderId, dto.paymentIntentId);
+  }
+
+  @Post('entrega/:slug/orders/:orderId/mock')
+  mockPaymentDelivery(@Param('slug') slug: string, @Param('orderId') orderId: string) {
+    return this.paymentsService.mockPaymentForDelivery(slug, orderId);
+  }
+
+  @Get('entrega/:slug/orders/:orderId/status')
+  getPaymentStatusDelivery(@Param('slug') slug: string, @Param('orderId') orderId: string) {
+    return this.paymentsService.syncPaymentStatusForDelivery(slug, orderId);
+  }
+
   @Post('webhooks/stripe')
   stripeWebhook(
     @Req() req: RawBodyRequest<Request>,

@@ -7,15 +7,22 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import {
   CreateOrderResponse,
+  isProductOnChannel,
   KITCHEN_ACTIVE_STATUSES,
+  MenuChannel,
   OrderItemStatus,
   OrderStatus,
   PaymentMethod,
   PaymentMode,
   PaymentStatus,
 } from '@pedidonamesa/shared';
-import { Order, OrderItem, Table, Product } from '../entities';
-import { CreateOrderDto, UpdateOrderItemStatusDto, UpdateOrderStatusDto } from './dto/order.dto';
+import { Order, OrderItem, Table, Product, Restaurant } from '../entities';
+import {
+  CreateDeliveryOrderDto,
+  CreateOrderDto,
+  UpdateOrderItemStatusDto,
+  UpdateOrderStatusDto,
+} from './dto/order.dto';
 import { mapOrder } from './order.mapper';
 import { OrdersGateway } from '../websocket/orders.gateway';
 
@@ -28,6 +35,8 @@ export class OrdersService {
     private readonly orderItemsRepo: Repository<OrderItem>,
     @InjectRepository(Table)
     private readonly tablesRepo: Repository<Table>,
+    @InjectRepository(Restaurant)
+    private readonly restaurantsRepo: Repository<Restaurant>,
     @InjectRepository(Product)
     private readonly productsRepo: Repository<Product>,
     private readonly ordersGateway: OrdersGateway,
@@ -43,20 +52,75 @@ export class OrdersService {
       throw new NotFoundException('Mesa não encontrada');
     }
 
-    const productIds = dto.items.map((i) => i.productId);
-    const products = await this.productsRepo.find({
-      where: { id: In(productIds), available: true },
+    return this.createOrder({
+      restaurant: table.restaurant,
+      channel: MenuChannel.TABLE,
+      dto,
+      table,
     });
+  }
+
+  async createFromDeliverySlug(
+    slug: string,
+    dto: CreateDeliveryOrderDto,
+  ): Promise<CreateOrderResponse> {
+    const restaurant = await this.restaurantsRepo.findOne({
+      where: { slug, active: true },
+    });
+
+    if (!restaurant) {
+      throw new NotFoundException('Restaurante não encontrado');
+    }
+
+    return this.createOrder({
+      restaurant,
+      channel: MenuChannel.DELIVERY,
+      dto,
+      delivery: {
+        customerName: dto.customerName.trim(),
+        customerPhone: dto.customerPhone.trim(),
+        deliveryAddress: dto.deliveryAddress.trim(),
+      },
+    });
+  }
+
+  private async createOrder(params: {
+    restaurant: Restaurant;
+    channel: MenuChannel;
+    dto: CreateOrderDto;
+    table?: Table;
+    delivery?: {
+      customerName: string;
+      customerPhone: string;
+      deliveryAddress: string;
+    };
+  }): Promise<CreateOrderResponse> {
+    const { restaurant, channel, dto, table, delivery } = params;
+    const productIds = dto.items.map((item) => item.productId);
+
+    const products = await this.productsRepo
+      .createQueryBuilder('product')
+      .innerJoin('product.category', 'category')
+      .where('product.id IN (:...productIds)', { productIds })
+      .andWhere('category.restaurantId = :restaurantId', { restaurantId: restaurant.id })
+      .andWhere('product.available = :available', { available: true })
+      .getMany();
 
     if (products.length !== productIds.length) {
       throw new BadRequestException('Um ou mais produtos não estão disponíveis');
+    }
+
+    for (const product of products) {
+      if (!isProductOnChannel(product, channel)) {
+        throw new BadRequestException('Um ou mais produtos não estão disponíveis neste canal');
+      }
     }
 
     const orderItems: Partial<OrderItem>[] = [];
     let total = 0;
 
     for (const item of dto.items) {
-      const product = products.find((p) => p.id === item.productId)!;
+      const product = products.find((entry) => entry.id === item.productId)!;
       const unitPrice = Number(product.price);
       total += unitPrice * item.quantity;
 
@@ -70,11 +134,15 @@ export class OrdersService {
       });
     }
 
-    const paymentRequired = table.restaurant.paymentMode === PaymentMode.PAY_BEFORE;
+    const paymentRequired = restaurant.paymentMode === PaymentMode.PAY_BEFORE;
 
     const order = this.ordersRepo.create({
-      tableId: table.id,
-      restaurantId: table.restaurantId,
+      channel,
+      tableId: table?.id ?? null,
+      restaurantId: restaurant.id,
+      customerName: delivery?.customerName ?? null,
+      customerPhone: delivery?.customerPhone ?? null,
+      deliveryAddress: delivery?.deliveryAddress ?? null,
       status: OrderStatus.PENDING,
       notes: dto.notes ?? null,
       total,
@@ -88,11 +156,10 @@ export class OrdersService {
 
     const saved = await this.ordersRepo.save(order);
     const full = await this.findById(saved.id);
-
-    const mapped = mapOrder(full, table);
+    const mapped = mapOrder(full, table ?? undefined);
 
     if (!paymentRequired) {
-      this.ordersGateway.emitOrderCreated(table.restaurantId, mapped);
+      this.ordersGateway.emitOrderCreated(restaurant.id, mapped);
     }
 
     return {
@@ -144,7 +211,7 @@ export class OrdersService {
 
     return orders
       .filter((order) => this.isVisibleInKitchen(order))
-      .map((o) => mapOrder(o));
+      .map((order) => mapOrder(order));
   }
 
   async getActiveOrdersForRestaurant(restaurantId: string) {
@@ -162,7 +229,7 @@ export class OrdersService {
       order: { createdAt: 'DESC' },
     });
 
-    return orders.map((o) => mapOrder(o));
+    return orders.map((order) => mapOrder(order));
   }
 
   async getRestaurantOrders(restaurantId: string, limit = 100) {
@@ -173,7 +240,7 @@ export class OrdersService {
       take: limit,
     });
 
-    return orders.map((o) => mapOrder(o));
+    return orders.map((order) => mapOrder(order));
   }
 
   async updateOrderStatus(
@@ -251,19 +318,19 @@ export class OrdersService {
   }
 
   private deriveOrderStatusFromItems(items: OrderItem[]): OrderStatus {
-    const active = items.filter((i) => i.status !== OrderItemStatus.CANCELLED);
+    const active = items.filter((item) => item.status !== OrderItemStatus.CANCELLED);
     if (active.length === 0) return OrderStatus.CANCELLED;
 
-    const allDelivered = active.every((i) => i.status === OrderItemStatus.DELIVERED);
+    const allDelivered = active.every((item) => item.status === OrderItemStatus.DELIVERED);
     if (allDelivered) return OrderStatus.DELIVERED;
 
     const allReadyOrDelivered = active.every(
-      (i) => i.status === OrderItemStatus.READY || i.status === OrderItemStatus.DELIVERED,
+      (item) => item.status === OrderItemStatus.READY || item.status === OrderItemStatus.DELIVERED,
     );
     if (allReadyOrDelivered) return OrderStatus.READY;
 
     const anyPreparing = active.some(
-      (i) => i.status === OrderItemStatus.PREPARING || i.status === OrderItemStatus.READY,
+      (item) => item.status === OrderItemStatus.PREPARING || item.status === OrderItemStatus.READY,
     );
     if (anyPreparing) return OrderStatus.PREPARING;
 
@@ -304,7 +371,7 @@ export class OrdersService {
     return order;
   }
 
-  private async findById(id: string) {
+  async findById(id: string) {
     const order = await this.ordersRepo.findOne({
       where: { id },
       relations: ['items', 'table'],

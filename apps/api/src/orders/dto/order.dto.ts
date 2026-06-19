@@ -9,7 +9,7 @@ import {
   IsInt,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { OrderStatus, OrderItemStatus } from '@pedidonamesa/shared';
+import { OrderStatus, OrderItemStatus, MenuChannel } from '@pedidonamesa/shared';
 
 export class CreateOrderItemDto {
   @IsUUID()
@@ -34,6 +34,17 @@ export class CreateOrderDto {
   @IsOptional()
   @IsString()
   notes?: string;
+}
+
+export class CreateDeliveryOrderDto extends CreateOrderDto {
+  @IsString()
+  customerName: string;
+
+  @IsString()
+  customerPhone: string;
+
+  @IsString()
+  deliveryAddress: string;
 }
 
 export class UpdateOrderStatusDto {
