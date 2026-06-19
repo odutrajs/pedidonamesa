@@ -1,11 +1,12 @@
 import { memo } from 'react';
-import { Minus, Plus, ShoppingBag } from 'lucide-react';
+import { Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react';
 import type { ProductDto, UpsellSuggestionDto } from '@pedidonamesa/shared';
 import { formatCurrency } from '../../lib/utils';
 import { Button } from '../ui/Button';
 import { EmptyState } from '../ui/EmptyState';
 import { Label, Textarea, Input } from '../ui/Input';
 import { CartUpsellSection } from './CartUpsellSection';
+import type { CartLineItem } from '../../types/cart';
 
 export interface DeliveryFormValues {
   customerName: string;
@@ -13,13 +14,8 @@ export interface DeliveryFormValues {
   deliveryAddress: string;
 }
 
-interface CartItem {
-  product: ProductDto;
-  quantity: number;
-}
-
 interface CartContentProps {
-  cart: CartItem[];
+  cart: CartLineItem[];
   orderNotes: string;
   total: number;
   error: string;
@@ -32,9 +28,26 @@ interface CartContentProps {
     onChange: (field: keyof DeliveryFormValues, value: string) => void;
   };
   onNotesChange: (notes: string) => void;
-  onUpdateQuantity: (productId: string, quantity: number) => void;
+  onUpdateQuantity: (lineId: string, quantity: number) => void;
   onAddProduct?: (product: ProductDto) => void;
   onSubmit: () => void;
+}
+
+function CartLineSelections({ item }: { item: CartLineItem }) {
+  if (item.selections.length === 0) return null;
+
+  return (
+    <ul className="mt-2 space-y-1">
+      {item.selections.map((selection, index) => (
+        <li key={`${selection.groupId}-${selection.optionId}`} className="flex items-start gap-2">
+          <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-zinc-800 text-[10px] font-bold text-zinc-300">
+            {index + 1}
+          </span>
+          <span className="text-sm text-zinc-400">{selection.optionName}</span>
+        </li>
+      ))}
+    </ul>
+  );
 }
 
 export const CartContent = memo(function CartContent({
@@ -55,7 +68,7 @@ export const CartContent = memo(function CartContent({
   return (
     <>
       {showTitle && (
-        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">Seu pedido</h2>
+        <h2 className="text-lg font-semibold text-white">Carrinho de compras</h2>
       )}
 
       {cart.length === 0 ? (
@@ -66,36 +79,45 @@ export const CartContent = memo(function CartContent({
           className={showTitle ? 'py-8' : 'py-4'}
         />
       ) : (
-        <ul className={`space-y-3 ${showTitle ? 'mt-4' : ''}`}>
+        <ul className={`space-y-4 ${showTitle ? 'mt-4' : ''}`}>
           {cart.map((item) => (
             <li
-              key={item.product.id}
-              className="flex items-center justify-between gap-3 border-b border-zinc-100 pb-3 last:border-0 dark:border-zinc-800"
+              key={item.lineId}
+              className="rounded-xl bg-zinc-900 p-3 ring-1 ring-zinc-800"
             >
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-medium text-zinc-900 dark:text-zinc-50">{item.product.name}</p>
-                <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                  {formatCurrency(item.product.price)} × {item.quantity}
-                </p>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 text-zinc-600 transition hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
-                  onClick={() => onUpdateQuantity(item.product.id, item.quantity - 1)}
-                  aria-label="Diminuir quantidade"
-                >
-                  <Minus className="h-3.5 w-3.5" />
-                </button>
-                <span className="w-6 text-center text-sm font-medium">{item.quantity}</span>
-                <button
-                  type="button"
-                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 text-zinc-600 transition hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
-                  onClick={() => onUpdateQuantity(item.product.id, item.quantity + 1)}
-                  aria-label="Aumentar quantidade"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                </button>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-white">{item.product.name}</p>
+                  <p className="mt-0.5 text-sm font-semibold text-brand-400">
+                    {formatCurrency(item.unitPrice * item.quantity)}
+                  </p>
+                  <CartLineSelections item={item} />
+                </div>
+                <div className="flex shrink-0 items-center gap-1 rounded-full bg-zinc-800 px-1 py-1">
+                  <button
+                    type="button"
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-brand-400 transition hover:bg-zinc-700"
+                    onClick={() => onUpdateQuantity(item.lineId, item.quantity - 1)}
+                    aria-label="Diminuir quantidade"
+                  >
+                    {item.quantity === 1 ? (
+                      <Trash2 className="h-4 w-4" />
+                    ) : (
+                      <Minus className="h-4 w-4" />
+                    )}
+                  </button>
+                  <span className="w-6 text-center text-sm font-semibold text-white">
+                    {item.quantity}
+                  </span>
+                  <button
+                    type="button"
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-white transition hover:bg-zinc-700"
+                    onClick={() => onUpdateQuantity(item.lineId, item.quantity + 1)}
+                    aria-label="Aumentar quantidade"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
             </li>
           ))}
@@ -107,10 +129,10 @@ export const CartContent = memo(function CartContent({
       )}
 
       {deliveryFields && cart.length > 0 && (
-        <div className="mt-4 space-y-3 border-t border-zinc-100 pt-4 dark:border-zinc-800">
-          <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50">Dados para entrega</p>
+        <div className="mt-4 space-y-3 rounded-xl bg-zinc-900 p-4 ring-1 ring-zinc-800">
+          <p className="text-sm font-semibold text-white">Informe seu nome e telefone</p>
           <div>
-            <Label>Nome</Label>
+            <Label>Nome completo</Label>
             <Input
               placeholder="Seu nome"
               value={deliveryFields.values.customerName}
@@ -118,7 +140,7 @@ export const CartContent = memo(function CartContent({
             />
           </div>
           <div>
-            <Label>Telefone</Label>
+            <Label>Número de celular</Label>
             <Input
               placeholder="(11) 99999-9999"
               value={deliveryFields.values.customerPhone}
@@ -126,7 +148,7 @@ export const CartContent = memo(function CartContent({
             />
           </div>
           <div>
-            <Label>Endereço</Label>
+            <Label>Endereço de entrega</Label>
             <Textarea
               placeholder="Rua, número, bairro, complemento..."
               value={deliveryFields.values.deliveryAddress}
@@ -136,24 +158,28 @@ export const CartContent = memo(function CartContent({
         </div>
       )}
 
-      <div className="mt-4 border-t border-zinc-100 pt-4 dark:border-zinc-800">
-        <Label>Observações</Label>
-        <Textarea
-          placeholder="Ex: sem cebola, gelado..."
-          value={orderNotes}
-          onChange={(e) => onNotesChange(e.target.value)}
-        />
-      </div>
+      {cart.length > 0 && (
+        <div className="mt-4 rounded-xl bg-zinc-900 p-4 ring-1 ring-zinc-800">
+          <Label>Observações</Label>
+          <Textarea
+            placeholder="Ex: sem cebola, gelado..."
+            value={orderNotes}
+            onChange={(e) => onNotesChange(e.target.value)}
+          />
+        </div>
+      )}
 
-      <div className="mt-4 flex items-center justify-between">
-        <span className="font-medium text-zinc-700 dark:text-zinc-300">Total</span>
-        <span className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">{formatCurrency(total)}</span>
-      </div>
+      {cart.length > 0 && (
+        <div className="mt-4 flex items-center justify-between px-1">
+          <span className="font-medium text-zinc-400">Total</span>
+          <span className="text-xl font-bold text-white">{formatCurrency(total)}</span>
+        </div>
+      )}
 
-      {error && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
+      {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
 
       <Button
-        className="mt-4 w-full"
+        className="mt-4 w-full bg-emerald-500 hover:bg-emerald-600"
         disabled={
           cart.length === 0 ||
           submitting ||
@@ -164,14 +190,14 @@ export const CartContent = memo(function CartContent({
         }
         onClick={onSubmit}
       >
-        {submitting ? 'Enviando...' : submitLabel}
+        {submitting ? 'Enviando...' : `${submitLabel}${cart.length > 0 ? ` ${formatCurrency(total)}` : ''}`}
       </Button>
     </>
   );
 });
 
 interface CartSidebarProps {
-  cart: CartItem[];
+  cart: CartLineItem[];
   orderNotes: string;
   total: number;
   error: string;
@@ -183,14 +209,14 @@ interface CartSidebarProps {
     onChange: (field: keyof DeliveryFormValues, value: string) => void;
   };
   onNotesChange: (notes: string) => void;
-  onUpdateQuantity: (productId: string, quantity: number) => void;
+  onUpdateQuantity: (lineId: string, quantity: number) => void;
   onAddProduct?: (product: ProductDto) => void;
   onSubmit: () => void;
 }
 
 export const CartSidebar = memo(function CartSidebar(props: CartSidebarProps) {
   return (
-    <aside className="sticky top-20 hidden rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900 lg:block">
+    <aside className="sticky top-20 hidden rounded-2xl bg-zinc-900 p-5 ring-1 ring-zinc-800 lg:block">
       <CartContent {...props} />
     </aside>
   );

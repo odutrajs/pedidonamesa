@@ -4,13 +4,9 @@ import type {
   UpsellConfigDto,
   UpsellSuggestionDto,
 } from '@pedidonamesa/shared';
+import type { CartLineItem } from '../types/cart';
 
 const MAX_SUGGESTIONS = 3;
-
-interface CartItem {
-  product: ProductDto;
-  quantity: number;
-}
 
 function buildProductMap(categories: CategoryDto[]): Map<string, ProductDto> {
   const map = new Map<string, ProductDto>();
@@ -23,7 +19,7 @@ function buildProductMap(categories: CategoryDto[]): Map<string, ProductDto> {
 }
 
 export function getUpsellSuggestions(
-  cart: CartItem[],
+  cart: CartLineItem[],
   categories: CategoryDto[],
   upsell: UpsellConfigDto,
 ): UpsellSuggestionDto[] {

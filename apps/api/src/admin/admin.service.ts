@@ -120,8 +120,10 @@ export class AdminService {
 
     return products.map((product) => ({
       ...product,
+      price: Number(product.price),
       suggestedProductIds: suggestedBySource.get(product.id) ?? [],
       channels: parseProductChannels(product.channels),
+      optionGroups: product.optionGroups ?? [],
     }));
   }
 

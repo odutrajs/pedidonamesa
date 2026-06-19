@@ -8,6 +8,7 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { OrderItemStatus } from '@pedidonamesa/shared';
+import type { OrderItemSelectionDto } from '@pedidonamesa/shared';
 import { Order } from './order.entity';
 import { Product } from './product.entity';
 
@@ -36,6 +37,9 @@ export class OrderItem {
 
   @Column({ type: 'enum', enum: OrderItemStatus, default: OrderItemStatus.PENDING })
   status: OrderItemStatus;
+
+  @Column({ type: 'jsonb', default: [] })
+  selections: OrderItemSelectionDto[];
 
   @ManyToOne(() => Order, (order) => order.items)
   @JoinColumn({ name: 'orderId' })

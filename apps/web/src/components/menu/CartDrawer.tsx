@@ -1,22 +1,19 @@
 import { memo } from 'react';
-import { X } from 'lucide-react';
+import { ArrowLeft, X } from 'lucide-react';
 import type { ProductDto, UpsellSuggestionDto } from '@pedidonamesa/shared';
 import { formatCurrency } from '../../lib/utils';
 import { CartContent, type DeliveryFormValues } from './CartSidebar';
-
-interface CartItem {
-  product: ProductDto;
-  quantity: number;
-}
+import type { CartLineItem } from '../../types/cart';
 
 interface CartDrawerProps {
   open: boolean;
-  cart: CartItem[];
+  cart: CartLineItem[];
   orderNotes: string;
   total: number;
   itemCount: number;
   error: string;
   submitting: boolean;
+  submitLabel?: string;
   upsellSuggestions?: UpsellSuggestionDto[];
   deliveryFields?: {
     values: DeliveryFormValues;
@@ -25,7 +22,7 @@ interface CartDrawerProps {
   onOpen: () => void;
   onClose: () => void;
   onNotesChange: (notes: string) => void;
-  onUpdateQuantity: (productId: string, quantity: number) => void;
+  onUpdateQuantity: (lineId: string, quantity: number) => void;
   onAddProduct?: (product: ProductDto) => void;
   onSubmit: () => void;
 }
@@ -38,6 +35,7 @@ export const CartDrawer = memo(function CartDrawer({
   itemCount,
   error,
   submitting,
+  submitLabel,
   upsellSuggestions,
   deliveryFields,
   onOpen,
@@ -50,47 +48,52 @@ export const CartDrawer = memo(function CartDrawer({
   return (
     <>
       {itemCount > 0 && !open && (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200 bg-white p-4 shadow-lg dark:border-zinc-800 dark:bg-zinc-900 lg:hidden">
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-800 bg-zinc-950 p-4 lg:hidden">
           <button
             type="button"
             onClick={onOpen}
-            className="flex w-full items-center justify-between rounded-xl bg-zinc-900 px-4 py-3.5 text-white transition active:scale-[0.98] dark:bg-zinc-100 dark:text-zinc-900"
+            className="flex w-full items-center justify-between rounded-xl bg-emerald-500 px-4 py-4 text-white shadow-lg transition active:scale-[0.98] hover:bg-emerald-600"
           >
-            <span className="text-sm font-medium">
+            <span className="text-sm font-semibold">
               {itemCount} {itemCount === 1 ? 'item' : 'itens'}
             </span>
-            <span className="text-sm font-semibold">{formatCurrency(total)}</span>
-            <span className="text-sm font-medium">Ver pedido →</span>
+            <span className="text-sm font-bold">{formatCurrency(total)}</span>
+            <span className="text-sm font-semibold">Ver carrinho →</span>
           </button>
         </div>
       )}
 
       {open && (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          <button
-            type="button"
-            className="absolute inset-0 bg-black/40"
-            onClick={onClose}
-            aria-label="Fechar carrinho"
-          />
-          <div className="absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-2xl bg-white p-5 pb-8 animate-slide-down dark:bg-zinc-900">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold dark:text-zinc-50">Seu pedido</h2>
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
-                aria-label="Fechar"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
+        <div className="fixed inset-0 z-50 flex flex-col bg-zinc-950 lg:hidden">
+          <header className="flex items-center gap-3 border-b border-zinc-800 px-4 py-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-9 w-9 items-center justify-center text-brand-400"
+              aria-label="Voltar"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <h2 className="flex-1 text-center text-lg font-semibold text-white">
+              Carrinho de compras
+            </h2>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-9 w-9 items-center justify-center text-zinc-400"
+              aria-label="Fechar"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </header>
+          <div className="flex-1 overflow-y-auto p-4 pb-8">
             <CartContent
               cart={cart}
               orderNotes={orderNotes}
               total={total}
               error={error}
               submitting={submitting}
+              submitLabel={submitLabel}
               showTitle={false}
               upsellSuggestions={upsellSuggestions}
               deliveryFields={deliveryFields}

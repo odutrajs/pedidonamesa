@@ -114,6 +114,30 @@ export const KITCHEN_ACTIVE_ITEM_STATUSES: OrderItemStatus[] = [
   OrderItemStatus.READY,
 ];
 
+export interface ProductOptionDto {
+  id: string;
+  name: string;
+  description?: string | null;
+  priceDelta: number;
+}
+
+export interface ProductOptionGroupDto {
+  id: string;
+  name: string;
+  minSelections: number;
+  maxSelections: number;
+  required: boolean;
+  options: ProductOptionDto[];
+}
+
+export interface OrderItemSelectionDto {
+  groupId: string;
+  groupName: string;
+  optionId: string;
+  optionName: string;
+  priceDelta: number;
+}
+
 export interface ProductDto {
   id: string;
   name: string;
@@ -125,6 +149,7 @@ export interface ProductDto {
   categoryId: string;
   suggestedProductIds: string[];
   channels: MenuChannel[];
+  optionGroups?: ProductOptionGroupDto[];
 }
 
 export interface UpsellSuggestionDto {
@@ -165,6 +190,7 @@ export interface OrderItemDto {
   unitPrice: number;
   notes: string | null;
   status: OrderItemStatus;
+  selections: OrderItemSelectionDto[];
 }
 
 export interface OrderDto {
@@ -239,10 +265,16 @@ export interface PaymentStatusDto {
   orderStatus: OrderStatus;
 }
 
+export interface CreateOrderItemSelectionInput {
+  groupId: string;
+  optionId: string;
+}
+
 export interface CreateOrderItemInput {
   productId: string;
   quantity: number;
   notes?: string;
+  selections?: CreateOrderItemSelectionInput[];
 }
 
 export interface CreateOrderInput {
@@ -255,6 +287,15 @@ export interface CreateDeliveryOrderInput extends CreateOrderInput {
   customerPhone: string;
   deliveryAddress: string;
 }
+
+export {
+  buildCartLineId,
+  formatSelectionSummary,
+  getMinimumUnitPrice,
+  isProductConfigurable,
+  validateProductSelections,
+} from './product-options.js';
+export type { SelectedOptionInput } from './product-options.js';
 
 export const WS_EVENTS = {
   ORDER_CREATED: 'order:created',

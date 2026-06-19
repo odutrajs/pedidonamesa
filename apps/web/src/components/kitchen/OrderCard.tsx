@@ -134,6 +134,21 @@ export const OrderCard = memo(function OrderCard({
                     <span className="font-medium text-zinc-600 dark:text-zinc-300">Obs:</span> {item.notes}
                   </p>
                 )}
+                {item.selections?.length > 0 && (
+                  <ul className="mt-2 space-y-1">
+                    {item.selections.map((selection, index) => (
+                      <li
+                        key={`${selection.groupId}-${selection.optionId}`}
+                        className="flex items-start gap-2 text-sm text-zinc-500 dark:text-zinc-400"
+                      >
+                        <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-zinc-200 text-[10px] font-bold text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300">
+                          {index + 1}
+                        </span>
+                        {selection.optionName}
+                      </li>
+                    ))}
+                  </ul>
+                )}
                 <Badge
                   variant={ORDER_ITEM_STATUS_BADGE[item.status]}
                   className="mt-1.5"

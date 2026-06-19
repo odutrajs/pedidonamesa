@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { MenuChannel, OrderDto } from '@pedidonamesa/shared';
+import type { MenuChannel, OrderDto, ProductOptionGroupDto } from '@pedidonamesa/shared';
 import { http, withAuth } from '../lib/axios';
 import { parsePriceInput } from '../lib/utils';
 import { queryKeys } from '../lib/query-keys';
@@ -147,9 +147,11 @@ export function useCreateProduct() {
     mutationFn: async ({
       data,
       image,
+      optionGroups,
     }: {
       data: ProductFormValues;
       image: File | null;
+      optionGroups?: ProductOptionGroupDto[];
     }) => {
       const formData = new FormData();
       formData.append('name', data.name.trim());
@@ -157,6 +159,9 @@ export function useCreateProduct() {
       formData.append('categoryId', data.categoryId);
       if (data.description?.trim()) {
         formData.append('description', data.description.trim());
+      }
+      if (optionGroups?.length) {
+        formData.append('optionGroups', JSON.stringify(optionGroups));
       }
       if (image) {
         formData.append('file', image);
@@ -182,11 +187,13 @@ export function useUpdateProduct() {
       data,
       image,
       channels,
+      optionGroups,
     }: {
       id: string;
       data: ProductFormValues;
       image: File | null;
       channels?: MenuChannel[];
+      optionGroups?: ProductOptionGroupDto[];
     }) => {
       const product = await http
         .patch<AdminProduct>(
@@ -197,6 +204,7 @@ export function useUpdateProduct() {
             categoryId: data.categoryId,
             description: data.description?.trim() || undefined,
             channels,
+            optionGroups,
           },
           withAuth(token),
         )

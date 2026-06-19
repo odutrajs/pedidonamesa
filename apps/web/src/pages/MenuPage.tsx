@@ -1,23 +1,30 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import type { CreateDeliveryOrderInput, CreateOrderInput, MenuDto, ProductDto } from '@pedidonamesa/shared';
-import { PaymentMode } from '@pedidonamesa/shared';
+import type {
+  CreateDeliveryOrderInput,
+  CreateOrderInput,
+  MenuDto,
+  OrderItemSelectionDto,
+  ProductDto,
+} from '@pedidonamesa/shared';
+import {
+  PaymentMode,
+  buildCartLineId,
+  isProductConfigurable,
+} from '@pedidonamesa/shared';
 import { MenuLayout } from '../components/menu/MenuLayout';
 import { CategoryNav } from '../components/menu/CategoryNav';
 import { CartSidebar, type DeliveryFormValues } from '../components/menu/CartSidebar';
 import { CartDrawer } from '../components/menu/CartDrawer';
-import { ProductCard } from '../components/menu/ProductCard';
+import { ProductCategorySection } from '../components/menu/ProductCategorySection';
+import { ProductConfigureSheet } from '../components/menu/ProductConfigureSheet';
 import { PaymentCheckoutModal } from '../components/payment/PaymentCheckoutModal';
-import { ProductCardSkeleton } from '../components/ui/Skeleton';
+import { Skeleton } from '../components/ui/Skeleton';
 import { FeedbackModal } from '../components/ui/FeedbackModal';
 import { EmptyState } from '../components/ui/EmptyState';
 import type { OrderPaymentContext } from '../hooks/usePayment';
 import { getUpsellSuggestions } from '../lib/getUpsellSuggestions';
-
-interface CartItem {
-  product: ProductDto;
-  quantity: number;
-}
+import type { CartLineItem } from '../types/cart';
 
 interface MenuPageProps {
   mode: 'table' | 'delivery';
@@ -56,7 +63,7 @@ export function MenuPage({
 }: MenuPageProps) {
   const isDelivery = mode === 'delivery';
 
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const [cart, setCart] = useState<CartLineItem[]>([]);
   const [orderNotes, setOrderNotes] = useState('');
   const [deliveryForm, setDeliveryForm] = useState<DeliveryFormValues>({
     customerName: '',
@@ -70,11 +77,12 @@ export function MenuPage({
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [checkoutOrderId, setCheckoutOrderId] = useState<string | null>(null);
   const [checkoutTotal, setCheckoutTotal] = useState(0);
+  const [configureProduct, setConfigureProduct] = useState<ProductDto | null>(null);
 
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
 
   const total = useMemo(
-    () => cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0),
+    () => cart.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0),
     [cart],
   );
 
@@ -106,7 +114,7 @@ export function MenuPage({
           setActiveCategory(visible[0].target.id.replace('cat-', ''));
         }
       },
-      { rootMargin: '-120px 0px -60% 0px', threshold: [0, 0.25, 0.5] },
+      { rootMargin: '-140px 0px -60% 0px', threshold: [0, 0.25, 0.5] },
     );
 
     menu.categories.forEach((category) => {
@@ -122,25 +130,56 @@ export function MenuPage({
     sectionRefs.current[id]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, []);
 
-  const addToCart = useCallback((product: ProductDto) => {
-    setCart((previous) => {
-      const existing = previous.find((item) => item.product.id === product.id);
-      if (existing) {
-        return previous.map((item) =>
-          item.product.id === product.id ? { ...item, quantity: item.quantity + 1 } : item,
-        );
-      }
-      return [...previous, { product, quantity: 1 }];
-    });
-  }, []);
+  const addConfiguredItem = useCallback(
+    (payload: {
+      product: ProductDto;
+      unitPrice: number;
+      selections: OrderItemSelectionDto[];
+    }) => {
+      const lineId = buildCartLineId(payload.product.id, payload.selections);
+      setCart((previous) => {
+        const existing = previous.find((item) => item.lineId === lineId);
+        if (existing) {
+          return previous.map((item) =>
+            item.lineId === lineId ? { ...item, quantity: item.quantity + 1 } : item,
+          );
+        }
+        return [
+          ...previous,
+          {
+            lineId,
+            product: payload.product,
+            quantity: 1,
+            unitPrice: payload.unitPrice,
+            selections: payload.selections,
+          },
+        ];
+      });
+      setConfigureProduct(null);
+    },
+    [],
+  );
 
-  const updateQuantity = useCallback((productId: string, quantity: number) => {
+  const handleProductSelect = useCallback((product: ProductDto) => {
+    if (isProductConfigurable(product)) {
+      setConfigureProduct(product);
+      return;
+    }
+
+    addConfiguredItem({
+      product,
+      unitPrice: product.price,
+      selections: [],
+    });
+  }, [addConfiguredItem]);
+
+  const updateQuantity = useCallback((lineId: string, quantity: number) => {
     if (quantity <= 0) {
-      setCart((previous) => previous.filter((item) => item.product.id !== productId));
+      setCart((previous) => previous.filter((item) => item.lineId !== lineId));
       return;
     }
     setCart((previous) =>
-      previous.map((item) => (item.product.id === productId ? { ...item, quantity } : item)),
+      previous.map((item) => (item.lineId === lineId ? { ...item, quantity } : item)),
     );
   }, []);
 
@@ -151,11 +190,11 @@ export function MenuPage({
   const payBefore = menu?.restaurant.paymentMode === PaymentMode.PAY_BEFORE;
   const submitLabel = payBefore
     ? isDelivery
-      ? 'Pagar e pedir delivery'
-      : 'Pagar e enviar pedido'
+      ? 'Finalizar pedido'
+      : 'Finalizar pedido'
     : isDelivery
-      ? 'Pedir delivery'
-      : 'Enviar pedido';
+      ? 'Finalizar pedido'
+      : 'Finalizar pedido';
 
   const resetAfterOrder = useCallback(() => {
     setCart([]);
@@ -172,6 +211,10 @@ export function MenuPage({
     const items = cart.map((item) => ({
       productId: item.product.id,
       quantity: item.quantity,
+      selections: item.selections.map((selection) => ({
+        groupId: selection.groupId,
+        optionId: selection.optionId,
+      })),
     }));
 
     try {
@@ -211,10 +254,10 @@ export function MenuPage({
 
   if (isLoading) {
     return (
-      <MenuLayout>
-        <div className="grid gap-4 sm:grid-cols-2">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <ProductCardSkeleton key={index} />
+      <MenuLayout restaurantName="Cardápio" subtitle="Carregando...">
+        <div className="space-y-6">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <Skeleton key={index} className="h-40 w-full rounded-2xl bg-zinc-900" />
           ))}
         </div>
       </MenuLayout>
@@ -223,7 +266,7 @@ export function MenuPage({
 
   if (!menu) {
     return (
-      <MenuLayout>
+      <MenuLayout restaurantName="Cardápio indisponível">
         <EmptyState
           icon={<EmptyIcon className="h-5 w-5" />}
           title={emptyTitle}
@@ -232,6 +275,13 @@ export function MenuPage({
       </MenuLayout>
     );
   }
+
+  const tableLabel =
+    mode === 'table' && menu.table
+      ? menu.table.label
+        ? `Mesa ${menu.table.number} · ${menu.table.label}`
+        : `Mesa ${menu.table.number}`
+      : undefined;
 
   const cartProps = {
     cart,
@@ -246,7 +296,7 @@ export function MenuPage({
       : undefined,
     onNotesChange: setOrderNotes,
     onUpdateQuantity: updateQuantity,
-    onAddProduct: addToCart,
+    onAddProduct: handleProductSelect,
     onSubmit: handleSubmitOrder,
   };
 
@@ -287,43 +337,42 @@ export function MenuPage({
         />
       )}
 
+      <ProductConfigureSheet
+        product={configureProduct}
+        open={configureProduct !== null}
+        onClose={() => setConfigureProduct(null)}
+        onConfirm={addConfiguredItem}
+      />
+
       <MenuLayout
+        restaurantName={menu.restaurant.name}
+        subtitle={isDelivery ? 'Delivery' : 'Cardápio digital'}
+        badge={tableLabel}
+        isDelivery={isDelivery}
         categoryNav={
           menu.categories.length > 1 ? (
             <CategoryNav
-              categories={menu.categories.map((category) => ({ id: category.id, name: category.name }))}
+              categories={menu.categories.map((category) => ({
+                id: category.id,
+                name: category.name,
+              }))}
               activeId={activeCategory}
               onSelect={scrollToCategory}
             />
           ) : undefined
         }
       >
-        {isDelivery && (
-          <p className="mb-6 text-sm text-zinc-500 dark:text-zinc-400">
-            Delivery · {menu.restaurant.name}
-          </p>
-        )}
-
-        <div className="grid gap-8 lg:grid-cols-[1fr_340px]">
-          <div className="space-y-10">
+        <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
+          <div className="space-y-8">
             {menu.categories.map((category) => (
-              <section
+              <ProductCategorySection
                 key={category.id}
-                id={`cat-${category.id}`}
-                ref={(element) => {
+                category={category}
+                onSelectProduct={handleProductSelect}
+                sectionRef={(element) => {
                   sectionRefs.current[category.id] = element;
                 }}
-                className="section-scroll"
-              >
-                <h2 className="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-                  {category.name}
-                </h2>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  {category.products.map((product) => (
-                    <ProductCard key={product.id} product={product} onAdd={addToCart} />
-                  ))}
-                </div>
-              </section>
+              />
             ))}
           </div>
 

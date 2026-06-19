@@ -10,6 +10,7 @@ export function mapOrderItem(item: OrderItem): OrderItemDto {
     unitPrice: Number(item.unitPrice),
     notes: item.notes,
     status: item.status,
+    selections: item.selections ?? [],
   };
 }
 

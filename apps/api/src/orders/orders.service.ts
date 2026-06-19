@@ -12,9 +12,12 @@ import {
   MenuChannel,
   OrderItemStatus,
   OrderStatus,
+  parseProductChannels,
   PaymentMethod,
   PaymentMode,
   PaymentStatus,
+  ProductDto,
+  validateProductSelections,
 } from '@pedidonamesa/shared';
 import { Order, OrderItem, Table, Product, Restaurant } from '../entities';
 import {
@@ -121,7 +124,26 @@ export class OrdersService {
 
     for (const item of dto.items) {
       const product = products.find((entry) => entry.id === item.productId)!;
-      const unitPrice = Number(product.price);
+      const productDto: ProductDto = {
+        id: product.id,
+        name: product.name,
+        description: product.description,
+        price: Number(product.price),
+        imageUrl: product.imageUrl,
+        available: product.available,
+        sortOrder: product.sortOrder,
+        categoryId: product.categoryId,
+        suggestedProductIds: [],
+        channels: parseProductChannels(product.channels),
+        optionGroups: product.optionGroups ?? [],
+      };
+
+      const validation = validateProductSelections(productDto, item.selections ?? []);
+      if (!validation.ok) {
+        throw new BadRequestException(validation.message);
+      }
+
+      const unitPrice = validation.unitPrice;
       total += unitPrice * item.quantity;
 
       orderItems.push({
@@ -130,6 +152,7 @@ export class OrdersService {
         quantity: item.quantity,
         unitPrice,
         notes: item.notes ?? null,
+        selections: validation.selections,
         status: OrderItemStatus.PENDING,
       });
     }

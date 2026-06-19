@@ -160,6 +160,7 @@ export class MenuService {
       categoryId: product.categoryId,
       suggestedProductIds,
       channels: parseProductChannels(product.channels),
+      optionGroups: product.optionGroups ?? [],
     };
   }
 }

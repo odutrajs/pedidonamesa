@@ -11,6 +11,14 @@ import {
 import { Type } from 'class-transformer';
 import { OrderStatus, OrderItemStatus, MenuChannel } from '@pedidonamesa/shared';
 
+export class CreateOrderItemSelectionDto {
+  @IsUUID()
+  groupId: string;
+
+  @IsUUID()
+  optionId: string;
+}
+
 export class CreateOrderItemDto {
   @IsUUID()
   productId: string;
@@ -22,6 +30,12 @@ export class CreateOrderItemDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateOrderItemSelectionDto)
+  selections?: CreateOrderItemSelectionDto[];
 }
 
 export class CreateOrderDto {

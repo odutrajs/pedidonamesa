@@ -26,6 +26,8 @@ import { ImageUpload } from '../ui/ImageUpload';
 import { Badge } from '../ui/Badge';
 import { Skeleton } from '../ui/Skeleton';
 import { EmptyState } from '../ui/EmptyState';
+import { ProductOptionsEditor } from './ProductOptionsEditor';
+import type { ProductOptionGroupDto } from '@pedidonamesa/shared';
 
 const ProductRow = memo(function ProductRow({
   product,
@@ -76,6 +78,7 @@ const ProductRow = memo(function ProductRow({
           </div>
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
             {formatCurrency(Number(product.price))} · {categoryName}
+            {(product.optionGroups?.length ?? 0) > 0 && ' · Personalizável'}
           </p>
           <label className="mt-1 inline-flex cursor-pointer items-center gap-1 text-xs font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300">
             <ImagePlus className="h-3 w-3" />
@@ -130,6 +133,7 @@ export const ProductsTab = memo(function ProductsTab() {
   ]);
   const [productImage, setProductImage] = useState<File | null>(null);
   const [productImagePreview, setProductImagePreview] = useState<string | null>(null);
+  const [productOptionGroups, setProductOptionGroups] = useState<ProductOptionGroupDto[]>([]);
 
   const isEditing = editingProductId !== null;
   const isSaving =
@@ -177,6 +181,7 @@ export const ProductsTab = memo(function ProductsTab() {
     setEditingProductId(null);
     setSuggestedProductIds([]);
     setProductChannels([MenuChannel.TABLE, MenuChannel.DELIVERY]);
+    setProductOptionGroups([]);
     reset({
       name: '',
       price: '',
@@ -195,6 +200,7 @@ export const ProductsTab = memo(function ProductsTab() {
           ? product.channels
           : [MenuChannel.TABLE, MenuChannel.DELIVERY],
       );
+      setProductOptionGroups(product.optionGroups ?? []);
       reset(
         {
           name: product.name,
@@ -222,7 +228,13 @@ export const ProductsTab = memo(function ProductsTab() {
   function onSubmit(data: ProductFormValues) {
     if (editingProductId) {
       updateProduct.mutate(
-        { id: editingProductId, data, image: productImage, channels: productChannels },
+        {
+          id: editingProductId,
+          data,
+          image: productImage,
+          channels: productChannels,
+          optionGroups: productOptionGroups,
+        },
         {
           onSuccess: () => {
             updateSuggestions.mutate(
@@ -236,7 +248,7 @@ export const ProductsTab = memo(function ProductsTab() {
     }
 
     createProduct.mutate(
-      { data, image: productImage },
+      { data, image: productImage, optionGroups: productOptionGroups },
       {
         onSuccess: () => {
           reset({
@@ -370,6 +382,13 @@ export const ProductsTab = memo(function ProductsTab() {
               </div>
             </div>
           )}
+          <div className="md:col-span-2">
+            <ProductOptionsEditor
+              value={productOptionGroups}
+              onChange={setProductOptionGroups}
+              disabled={isSaving}
+            />
+          </div>
           <div className="md:col-span-2">
             <ImageUpload
               value={productImage}

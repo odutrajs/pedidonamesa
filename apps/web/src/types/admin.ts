@@ -1,4 +1,4 @@
-import type { MenuChannel } from '@pedidonamesa/shared';
+import type { MenuChannel, ProductOptionGroupDto } from '@pedidonamesa/shared';
 
 export interface Category {
   id: string;
@@ -19,6 +19,7 @@ export interface AdminProduct {
   sortOrder: number;
   suggestedProductIds: string[];
   channels: MenuChannel[];
+  optionGroups?: ProductOptionGroupDto[];
 }
 
 export interface TableRow {

@@ -8,6 +8,7 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { Category } from './category.entity';
+import type { ProductOptionGroupDto } from '@pedidonamesa/shared';
 
 @Entity('products')
 export class Product {
@@ -37,6 +38,9 @@ export class Product {
 
   @Column('simple-array', { default: 'TABLE,DELIVERY' })
   channels: string[];
+
+  @Column({ type: 'jsonb', default: [] })
+  optionGroups: ProductOptionGroupDto[];
 
   @ManyToOne(() => Category, (category) => category.products)
   @JoinColumn({ name: 'categoryId' })

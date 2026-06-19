@@ -7,6 +7,87 @@ import { AppModule } from './app.module';
 import { Restaurant, User, Table, Category, Product, ProductSuggestion } from './entities';
 import { UserRole } from '@pedidonamesa/shared';
 
+const PIZZA_OPTION_GROUPS = [
+  {
+    id: 'a1111111-1111-4111-8111-111111111111',
+    name: 'Bordas',
+    minSelections: 1,
+    maxSelections: 1,
+    required: true,
+    options: [
+      { id: 'b1111111-1111-4111-8111-111111111111', name: 'Sem Borda', priceDelta: 0 },
+      { id: 'b1111111-1111-4111-8111-111111111112', name: 'Borda Catupiry', priceDelta: 17 },
+      { id: 'b1111111-1111-4111-8111-111111111113', name: 'Borda Chocolate', priceDelta: 19 },
+    ],
+  },
+  {
+    id: 'a2222222-2222-4222-8222-222222222222',
+    name: 'Massas',
+    minSelections: 1,
+    maxSelections: 1,
+    required: true,
+    options: [
+      { id: 'b2222222-2222-4222-8222-222222222221', name: 'Massa Tradicional', priceDelta: 0 },
+      { id: 'b2222222-2222-4222-8222-222222222222', name: 'Massa Integral', priceDelta: 14 },
+    ],
+  },
+  {
+    id: 'a3333333-3333-4333-8333-333333333333',
+    name: 'Sabores',
+    minSelections: 2,
+    maxSelections: 2,
+    required: true,
+    options: [
+      { id: 'b3333333-3333-4333-8333-333333333331', name: '1/2 Margherita', priceDelta: 0 },
+      { id: 'b3333333-3333-4333-8333-333333333332', name: '1/2 Calabresa', priceDelta: 0 },
+      { id: 'b3333333-3333-4333-8333-333333333333', name: '1/2 Costela', priceDelta: 0 },
+      { id: 'b3333333-3333-4333-8333-333333333334', name: '1/2 Quatro Queijos', priceDelta: 0 },
+      { id: 'b3333333-3333-4333-8333-333333333335', name: '1/2 Portuguesa', priceDelta: 5 },
+    ],
+  },
+];
+
+async function ensurePizzaDemo(
+  categoriesRepo: ReturnType<DataSource['getRepository']>,
+  productsRepo: ReturnType<DataSource['getRepository']>,
+  restaurantId: string,
+) {
+  let pizzas = await categoriesRepo.findOne({
+    where: { restaurantId, name: 'Pizzas' },
+  });
+
+  if (!pizzas) {
+    pizzas = await categoriesRepo.save(
+      categoriesRepo.create({
+        name: 'Pizzas',
+        description: 'Pizzas artesanais',
+        sortOrder: 0,
+        restaurantId,
+      }),
+    );
+  }
+
+  const existing = await productsRepo.findOne({
+    where: { categoryId: pizzas.id, name: 'Grande 2 Sabores (8 pedaços)' },
+  });
+
+  if (!existing) {
+    await productsRepo.save(
+      productsRepo.create({
+        name: 'Grande 2 Sabores (8 pedaços)',
+        description: 'Escolha borda, massa e dois sabores',
+        price: 65,
+        categoryId: pizzas.id,
+        sortOrder: 1,
+        optionGroups: PIZZA_OPTION_GROUPS,
+      }),
+    );
+  } else if (!existing.optionGroups?.length) {
+    existing.optionGroups = PIZZA_OPTION_GROUPS;
+    await productsRepo.save(existing);
+  }
+}
+
 async function seed() {
   const app = await NestFactory.createApplicationContext(AppModule);
   const dataSource = app.get(DataSource);
@@ -162,6 +243,8 @@ async function seed() {
     const table = await tablesRepo.findOne({ where: { restaurantId: restaurant.id, number: 1 } });
     console.log('Seed já existente. Mesa 1 token:', table?.token);
   }
+
+  await ensurePizzaDemo(categoriesRepo, productsRepo, restaurant.id);
 
   await app.close();
 }

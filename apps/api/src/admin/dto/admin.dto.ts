@@ -12,7 +12,7 @@ import {
   Min,
   ValidateIf,
 } from 'class-validator';
-import { PaymentMode, MenuChannel } from '@pedidonamesa/shared';
+import { PaymentMode, MenuChannel, ProductOptionGroupDto } from '@pedidonamesa/shared';
 
 function parsePrice(value: unknown): number {
   if (typeof value === 'number') return value;
@@ -93,6 +93,20 @@ export class CreateProductDto {
   @IsArray()
   @IsEnum(MenuChannel, { each: true })
   channels?: MenuChannel[];
+
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      try {
+        return JSON.parse(value) as ProductOptionGroupDto[];
+      } catch {
+        return [];
+      }
+    }
+    return value;
+  })
+  @IsArray()
+  optionGroups?: ProductOptionGroupDto[];
 }
 
 export class UpdateProductDto {
@@ -131,6 +145,20 @@ export class UpdateProductDto {
   @IsArray()
   @IsEnum(MenuChannel, { each: true })
   channels?: MenuChannel[];
+
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      try {
+        return JSON.parse(value) as ProductOptionGroupDto[];
+      } catch {
+        return [];
+      }
+    }
+    return value;
+  })
+  @IsArray()
+  optionGroups?: ProductOptionGroupDto[];
 }
 
 export class CreateTableDto {

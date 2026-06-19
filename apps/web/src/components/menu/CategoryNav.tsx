@@ -8,23 +8,27 @@ interface CategoryNavProps {
 
 export function CategoryNav({ categories, activeId, onSelect }: CategoryNavProps) {
   return (
-    <nav>
-      <div className="mx-auto flex max-w-6xl gap-1 overflow-x-auto px-4 py-3 scrollbar-hide">
-        {categories.map((category) => (
-          <button
-            key={category.id}
-            type="button"
-            onClick={() => onSelect(category.id)}
-            className={cn(
-              'shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition',
-              activeId === category.id
-                ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
-                : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100',
-            )}
-          >
-            {category.name}
-          </button>
-        ))}
+    <nav className="sticky top-0 z-30 border-b border-zinc-800 bg-black/95 backdrop-blur-md">
+      <div className="mx-auto flex max-w-3xl gap-1 overflow-x-auto px-4 scrollbar-hide">
+        {categories.map((category) => {
+          const isActive = activeId === category.id;
+          return (
+            <button
+              key={category.id}
+              type="button"
+              onClick={() => onSelect(category.id)}
+              className={cn(
+                'relative shrink-0 px-4 py-3.5 text-sm font-semibold transition',
+                isActive ? 'text-brand-400' : 'text-zinc-500 hover:text-zinc-300',
+              )}
+            >
+              {category.name}
+              {isActive && (
+                <span className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-brand-500" />
+              )}
+            </button>
+          );
+        })}
       </div>
     </nav>
   );
