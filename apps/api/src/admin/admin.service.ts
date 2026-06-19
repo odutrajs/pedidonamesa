@@ -64,7 +64,11 @@ export class AdminService {
       .getMany();
   }
 
-  async createProduct(restaurantId: string, dto: CreateProductDto) {
+  async createProduct(
+    restaurantId: string,
+    dto: CreateProductDto,
+    file?: Express.Multer.File,
+  ) {
     const category = await this.categoriesRepo.findOne({
       where: { id: dto.categoryId, restaurantId },
     });
@@ -74,6 +78,15 @@ export class AdminService {
       ...dto,
       sortOrder: dto.sortOrder ?? 0,
     });
+
+    if (file) {
+      product.imageUrl = await this.storage.uploadProductImage(
+        file.originalname,
+        file.buffer,
+        file.mimetype,
+      );
+    }
+
     return this.productsRepo.save(product);
   }
 

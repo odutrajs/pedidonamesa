@@ -5,6 +5,12 @@ export function formatCurrency(value: number) {
   }).format(value);
 }
 
+export function parsePriceInput(value: string): number {
+  const normalized = value.trim().replace(',', '.');
+  if (!normalized) return NaN;
+  return parseFloat(normalized);
+}
+
 export function formatTime(date: string) {
   return new Intl.DateTimeFormat('pt-BR', {
     hour: '2-digit',

@@ -26,6 +26,21 @@ import {
   UpdateTableDto,
 } from './dto/admin.dto';
 
+const imageUploadOptions = {
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (
+    _req: Express.Request,
+    file: Express.Multer.File,
+    cb: (error: Error | null, acceptFile: boolean) => void,
+  ) => {
+    if (!/^image\/(jpeg|png|webp|gif)$/.test(file.mimetype)) {
+      cb(new BadRequestException('Formato de imagem não suportado'), false);
+      return;
+    }
+    cb(null, true);
+  },
+};
+
 @Controller('admin')
 @UseGuards(JwtAuthGuard)
 export class AdminController {
@@ -66,9 +81,14 @@ export class AdminController {
   }
 
   @Post('products')
-  createProduct(@Req() req: { user: User }, @Body() dto: CreateProductDto) {
+  @UseInterceptors(FileInterceptor('file', imageUploadOptions))
+  createProduct(
+    @Req() req: { user: User },
+    @Body() dto: CreateProductDto,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
     assertRole(req.user, [UserRole.ADMIN]);
-    return this.adminService.createProduct(req.user.restaurantId, dto);
+    return this.adminService.createProduct(req.user.restaurantId, dto, file);
   }
 
   @Patch('products/:id')
@@ -82,18 +102,7 @@ export class AdminController {
   }
 
   @Post('products/:id/image')
-  @UseInterceptors(
-    FileInterceptor('file', {
-      limits: { fileSize: 5 * 1024 * 1024 },
-      fileFilter: (_req, file, cb) => {
-        if (!/^image\/(jpeg|png|webp|gif)$/.test(file.mimetype)) {
-          cb(new BadRequestException('Formato de imagem não suportado'), false);
-          return;
-        }
-        cb(null, true);
-      },
-    }),
-  )
+  @UseInterceptors(FileInterceptor('file', imageUploadOptions))
   uploadProductImage(
     @Param('id') id: string,
     @Req() req: { user: User },

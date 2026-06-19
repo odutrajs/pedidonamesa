@@ -1,11 +1,23 @@
+import { Transform, Type } from 'class-transformer';
 import {
   IsBoolean,
   IsInt,
+  IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
   Min,
 } from 'class-validator';
+
+function parsePrice(value: unknown): number {
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string') {
+    const normalized = value.trim().replace(',', '.');
+    if (!normalized) return NaN;
+    return parseFloat(normalized);
+  }
+  return NaN;
+}
 
 export class CreateCategoryDto {
   @IsString()
@@ -40,17 +52,22 @@ export class UpdateCategoryDto {
 
 export class CreateProductDto {
   @IsString()
+  @IsNotEmpty()
   name: string;
 
   @IsOptional()
+  @Transform(({ value }) => (value === '' || value == null ? undefined : String(value)))
   @IsString()
   description?: string;
 
-  @IsNumber()
+  @Type(() => Number)
+  @Transform(({ value }) => parsePrice(value))
+  @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
   price: number;
 
   @IsString()
+  @IsNotEmpty()
   categoryId: string;
 
   @IsOptional()
@@ -72,7 +89,9 @@ export class UpdateProductDto {
   description?: string;
 
   @IsOptional()
-  @IsNumber()
+  @Type(() => Number)
+  @Transform(({ value }) => (value == null ? undefined : parsePrice(value)))
+  @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
   price?: number;
 

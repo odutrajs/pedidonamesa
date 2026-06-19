@@ -1,6 +1,6 @@
 import { memo, useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { ImagePlus, Package, Plus, Upload } from 'lucide-react';
+import { ImagePlus, Package, Plus } from 'lucide-react';
 import {
   useCategories,
   useCreateProduct,
@@ -8,11 +8,12 @@ import {
   useToggleProduct,
   useUploadProductImage,
 } from '../../hooks/useAdmin';
-import { formatCurrency } from '../../lib/utils';
+import { formatCurrency, parsePriceInput } from '../../lib/utils';
 import type { AdminProduct, Category, ProductFormValues } from '../../types/admin';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
-import { Input, Label, Select } from '../ui/Input';
+import { Input, Select } from '../ui/Input';
+import { ImageUpload } from '../ui/ImageUpload';
 import { Badge } from '../ui/Badge';
 import { Skeleton } from '../ui/Skeleton';
 import { EmptyState } from '../ui/EmptyState';
@@ -59,7 +60,7 @@ const ProductRow = memo(function ProductRow({
             {formatCurrency(Number(product.price))} · {categoryName}
           </p>
           <label className="mt-1 inline-flex cursor-pointer items-center gap-1 text-xs font-medium text-brand-600 hover:text-brand-700">
-            <Upload className="h-3 w-3" />
+            <ImagePlus className="h-3 w-3" />
             {isUploading ? 'Enviando...' : product.imageUrl ? 'Trocar imagem' : 'Adicionar imagem'}
             <input
               type="file"
@@ -97,7 +98,14 @@ export const ProductsTab = memo(function ProductsTab() {
   const [productImage, setProductImage] = useState<File | null>(null);
   const [productImagePreview, setProductImagePreview] = useState<string | null>(null);
 
-  const { register, handleSubmit, reset, setValue, watch } = useForm<ProductFormValues>({
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setValue,
+    watch,
+    formState: { errors },
+  } = useForm<ProductFormValues>({
     defaultValues: { name: '', price: '', categoryId: '', description: '' },
   });
 
@@ -155,10 +163,26 @@ export const ProductsTab = memo(function ProductsTab() {
       </div>
 
       <Card>
-        <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4 md:grid-cols-2">
-          <Input placeholder="Nome do produto" {...register('name')} />
-          <Input placeholder="Preço" type="number" step="0.01" {...register('price')} />
-          <Select {...register('categoryId')}>
+        <form method="post" onSubmit={handleSubmit(onSubmit)} className="grid gap-4 md:grid-cols-2">
+          <div>
+            <Input placeholder="Nome do produto" {...register('name', { required: true })} />
+            {errors.name && <p className="mt-1 text-sm text-red-600">Informe o nome do produto</p>}
+          </div>
+          <div>
+            <Input
+              placeholder="Preço"
+              type="number"
+              step="0.01"
+              min="0"
+              {...register('price', {
+                required: true,
+                validate: (value) =>
+                  !Number.isNaN(parsePriceInput(value)) && parsePriceInput(value) >= 0,
+              })}
+            />
+            {errors.price && <p className="mt-1 text-sm text-red-600">Informe um preço válido</p>}
+          </div>
+          <Select {...register('categoryId', { required: true })}>
             {categories.map((c: Category) => (
               <option key={c.id} value={c.id}>
                 {c.name}
@@ -167,20 +191,18 @@ export const ProductsTab = memo(function ProductsTab() {
           </Select>
           <Input placeholder="Descrição (opcional)" {...register('description')} />
           <div className="md:col-span-2">
-            <Label>Imagem do produto</Label>
-            <Input
-              type="file"
-              accept="image/jpeg,image/png,image/webp,image/gif"
-              onChange={(e) => handleImageChange(e.target.files?.[0] ?? null)}
+            <ImageUpload
+              value={productImage}
+              previewUrl={productImagePreview}
+              disabled={createProduct.isPending}
+              onChange={handleImageChange}
             />
-            {productImagePreview && (
-              <img
-                src={productImagePreview}
-                alt="Prévia"
-                className="mt-2 h-20 w-20 rounded-lg object-cover ring-1 ring-zinc-200"
-              />
-            )}
           </div>
+          {createProduct.isError && (
+            <p className="md:col-span-2 text-sm text-red-600">
+              Não foi possível salvar o produto. Verifique os campos e tente novamente.
+            </p>
+          )}
           <div className="md:col-span-2">
             <Button type="submit" disabled={createProduct.isPending}>
               <Plus className="h-4 w-4" />

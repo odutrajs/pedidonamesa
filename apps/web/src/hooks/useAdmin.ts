@@ -66,26 +66,20 @@ export function useCreateProduct() {
       data: ProductFormValues;
       image: File | null;
     }) => {
-      const created = await http
-        .post<AdminProduct>(
-          '/admin/products',
-          {
-            name: data.name,
-            description: data.description || undefined,
-            price: Number(data.price),
-            categoryId: data.categoryId,
-          },
-          withAuth(token),
-        )
-        .then((r) => r.data);
-
+      const formData = new FormData();
+      formData.append('name', data.name.trim());
+      formData.append('price', String(data.price));
+      formData.append('categoryId', data.categoryId);
+      if (data.description?.trim()) {
+        formData.append('description', data.description.trim());
+      }
       if (image) {
-        const formData = new FormData();
         formData.append('file', image);
-        await http.post(`/admin/products/${created.id}/image`, formData, withAuth(token));
       }
 
-      return created;
+      return http
+        .post<AdminProduct>('/admin/products', formData, withAuth(token))
+        .then((r) => r.data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.products });
