@@ -78,20 +78,4 @@ jobs:
           HOSTINGER_API_KEY: ${{ secrets.HOSTINGER_API_KEY }}
           HOSTINGER_VM_ID: ${{ vars.HOSTINGER_VM_ID }}
           PROJECT_NAME: pedidonamesa
-        run: |
-          API_BASE="https://developers.hostinger.com/api/vps/v1"
-          CONTAINERS=$(curl -sS \
-            -H "Authorization: Bearer ${HOSTINGER_API_KEY}" \
-            "${API_BASE}/virtual-machines/${HOSTINGER_VM_ID}/docker/${PROJECT_NAME}/containers")
-
-          echo "$CONTAINERS" | jq -r '.[] | "\(.name): \(.state)"'
-
-          for service in pedidonamesa-api-1 pedidonamesa-web-1 pedidonamesa-nginx-1; do
-            STATE=$(echo "$CONTAINERS" | jq -r --arg name "$service" '.[] | select(.name == $name) | .state')
-            if [ "$STATE" != "running" ]; then
-              echo "Container $service is not running (state: ${STATE:-missing})"
-              exit 1
-            fi
-          done
-
-          echo "Core containers are running"
+        run: bash .github/scripts/verify-hostinger-containers.sh
