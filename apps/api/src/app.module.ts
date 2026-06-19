@@ -7,6 +7,7 @@ import { OrdersModule } from './orders/orders.module';
 import { WebsocketModule } from './websocket/websocket.module';
 import { AdminModule } from './admin/admin.module';
 import { StorageModule } from './storage/storage.module';
+import { BootstrapModule } from './bootstrap/bootstrap.module';
 import * as entities from './entities';
 
 @Module({
@@ -36,6 +37,7 @@ import * as entities from './entities';
     WebsocketModule,
     AdminModule,
     StorageModule,
+    BootstrapModule,
   ],
 })
 export class AppModule {}
