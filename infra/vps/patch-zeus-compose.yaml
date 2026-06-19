@@ -8,14 +8,16 @@ services:
       - sh
       - -c
       - |
-        awk '/^server \{/{buf=$0"\n";in=1;card=0;next} in{buf=buf $0"\n";if(/cardapionamesa/)card=1;if(/^}/){if(!card)printf "%s",buf;in=0;buf=""}next}{print}' /zeus/nginx.conf > /zeus/nginx.clean
-        grep -v 'proxy_set_header .* ;$$' /zeus/nginx.clean > /zeus/nginx.conf
+        sed -i '/proxy_set_header Host ;/d' /zeus/nginx.conf
+        sed -i '/proxy_set_header X-Real-IP ;/d' /zeus/nginx.conf
+        sed -i '/proxy_set_header X-Forwarded-For ;/d' /zeus/nginx.conf
+        sed -i '/proxy_set_header X-Forwarded-Proto ;/d' /zeus/nginx.conf
+        sed -i '/proxy_set_header Upgrade ;/d' /zeus/nginx.conf
+        sed -i '/server_name cardapionamesa/,/^}/d' /zeus/nginx.conf
         if grep -q 'cardapionamesa.com' /zeus/nginx.conf; then
           echo 'cardapionamesa.com ja configurado'
         else
           echo 'c2VydmVyIHsKICAgIGxpc3RlbiA4MDsKICAgIHNlcnZlcl9uYW1lIGNhcmRhcGlvbmFtZXNhLmNvbSB3d3cuY2FyZGFwaW9uYW1lc2EuY29tOwogICAgbG9jYXRpb24gLyB7CiAgICAgICAgcHJveHlfcGFzcyBodHRwOi8vMTcyLjE3LjAuMTo4MDgwOwogICAgICAgIHByb3h5X2h0dHBfdmVyc2lvbiAxLjE7CiAgICAgICAgcHJveHlfc2V0X2hlYWRlciBIb3N0ICRob3N0OwogICAgICAgIHByb3h5X3NldF9oZWFkZXIgWC1SZWFsLUlQICRyZW1vdGVfYWRkcjsKICAgICAgICBwcm94eV9zZXRfaGVhZGVyIFgtRm9yd2FyZGVkLUZvciAkcHJveHlfYWRkX3hfZm9yd2FyZGVkX2ZvcjsKICAgICAgICBwcm94eV9zZXRfaGVhZGVyIFgtRm9yd2FyZGVkLVByb3RvICRzY2hlbWU7CiAgICAgICAgcHJveHlfc2V0X2hlYWRlciBVcGdyYWRlICRodHRwX3VwZ3JhZGU7CiAgICAgICAgcHJveHlfc2V0X2hlYWRlciBDb25uZWN0aW9uICJ1cGdyYWRlIjsKICAgIH0KfQo=' | base64 -d >> /zeus/nginx.conf
         fi
-        docker exec zeus-backend-nginx-1 nginx -t
-        docker exec zeus-backend-nginx-1 nginx -s reload
-        echo 'Zeus nginx atualizado'
+        docker exec zeus-backend-nginx-1 nginx -t && docker exec zeus-backend-nginx-1 nginx -s reload && echo OK
     restart: "no"
