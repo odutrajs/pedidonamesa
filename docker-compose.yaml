@@ -81,12 +81,12 @@ services:
       - sh
       - -c
       - |
-        mkdir -p /etc/letsencrypt/live/cardapionamesa.com
-        if [ ! -s /etc/letsencrypt/live/cardapionamesa.com/fullchain.pem ]; then
+        mkdir -p /etc/letsencrypt/live/cardapionamesa.com-0001
+        if [ ! -s /etc/letsencrypt/live/cardapionamesa.com-0001/fullchain.pem ]; then
           apk add --no-cache openssl
           openssl req -x509 -nodes -newkey rsa:2048 -days 1 \
-            -keyout /etc/letsencrypt/live/cardapionamesa.com/privkey.pem \
-            -out /etc/letsencrypt/live/cardapionamesa.com/fullchain.pem \
+            -keyout /etc/letsencrypt/live/cardapionamesa.com-0001/privkey.pem \
+            -out /etc/letsencrypt/live/cardapionamesa.com-0001/fullchain.pem \
             -subj "/CN=cardapionamesa.com"
         fi
     restart: "no"
@@ -156,21 +156,19 @@ services:
     depends_on:
       certbot-init:
         condition: service_completed_successfully
+    environment:
+      CERTBOT_EMAIL: ${CERTBOT_EMAIL}
     entrypoint:
       - sh
       - -c
       - |
-        if [ -f /etc/letsencrypt/live/cardapionamesa.com/fullchain.pem ]; then
-          docker exec pedidonamesa-nginx-1 nginx -s reload && echo OK
-        else
+        if ! docker run --rm -v pedidonamesa_certbot-etc:/etc/letsencrypt:ro alpine test -s /etc/letsencrypt/live/cardapionamesa.com-0001/fullchain.pem; then
           docker run --rm -v pedidonamesa_certbot-etc:/etc/letsencrypt -v pedidonamesa_certbot-www:/var/www/certbot \
-            -e CERTBOT_EMAIL=$$CERTBOT_EMAIL certbot/certbot certonly --webroot -w /var/www/certbot \
-            -d cardapionamesa.com -d www.cardapionamesa.com --email $$CERTBOT_EMAIL --agree-tos --non-interactive
-          docker exec pedidonamesa-nginx-1 nginx -s reload && echo OK
+            certbot/certbot certonly --webroot -w /var/www/certbot \
+            -d cardapionamesa.com -d www.cardapionamesa.com \
+            --email "$CERTBOT_EMAIL" --agree-tos --non-interactive
         fi
-    environment:
-      CERTBOT_EMAIL: ${CERTBOT_EMAIL}
-    volumes_from: []
+        docker exec pedidonamesa-nginx-1 nginx -s reload && echo OK
     restart: "no"
 
 volumes:
