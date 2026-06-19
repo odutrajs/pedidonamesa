@@ -93,6 +93,7 @@ services:
 
   nginx:
     image: ghcr.io/odutrajs/pedidonamesa-nginx:latest
+    pull_policy: always
     restart: unless-stopped
     ports:
       - "80:80"
@@ -119,20 +120,17 @@ services:
       nginx:
         condition: service_started
     entrypoint:
-      - certbot
-      - certonly
-      - --webroot
-      - -w
-      - /var/www/certbot
-      - -d
-      - cardapionamesa.com
-      - -d
-      - www.cardapionamesa.com
-      - --email
-      - ${CERTBOT_EMAIL}
-      - --agree-tos
-      - --non-interactive
-      - --keep-until-expiring
+      - sh
+      - -c
+      - |
+        sleep 8
+        certbot certonly --webroot -w /var/www/certbot \
+          -d cardapionamesa.com -d www.cardapionamesa.com \
+          --email "$$CERTBOT_EMAIL" --agree-tos --non-interactive --keep-until-expiring \
+          || echo "certbot init skipped or failed"
+        exit 0
+    environment:
+      CERTBOT_EMAIL: ${CERTBOT_EMAIL}
     restart: "no"
 
   certbot-renew:
@@ -161,7 +159,18 @@ services:
     entrypoint:
       - sh
       - -c
-      - docker exec pedidonamesa-nginx-1 nginx -s reload && echo OK
+      - |
+        if [ -f /etc/letsencrypt/live/cardapionamesa.com/fullchain.pem ]; then
+          docker exec pedidonamesa-nginx-1 nginx -s reload && echo OK
+        else
+          docker run --rm -v pedidonamesa_certbot-etc:/etc/letsencrypt -v pedidonamesa_certbot-www:/var/www/certbot \
+            -e CERTBOT_EMAIL=$$CERTBOT_EMAIL certbot/certbot certonly --webroot -w /var/www/certbot \
+            -d cardapionamesa.com -d www.cardapionamesa.com --email $$CERTBOT_EMAIL --agree-tos --non-interactive
+          docker exec pedidonamesa-nginx-1 nginx -s reload && echo OK
+        fi
+    environment:
+      CERTBOT_EMAIL: ${CERTBOT_EMAIL}
+    volumes_from: []
     restart: "no"
 
 volumes:
