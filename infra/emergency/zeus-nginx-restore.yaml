@@ -1,0 +1,99 @@
+# One-shot emergency restore — NOT part of pedidonamesa. Delete after Zeus is back.
+services:
+  restore:
+    image: docker:27-cli
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /opt/zeus-backend:/zeus
+    entrypoint:
+      - sh
+      - -c
+      - |
+        set -e
+        ls -la /zeus/nginx* 2>/dev/null || true
+        BEST=/zeus/nginx.live
+        for f in /zeus/nginx.work /zeus/nginx.bak /zeus/nginx.conf.bak; do
+          if [ -s "$f" ] && [ "$(wc -l < "$f")" -gt "$(wc -l < "$BEST" 2>/dev/null || echo 0)" ]; then BEST="$f"; fi
+        done
+        if [ ! -s "$BEST" ] || [ "$(wc -l < "$BEST")" -lt 50 ]; then
+          echo "No backup found, writing reconstructed config"
+          cat > /zeus/nginx.conf <<'NGINX'
+        server {
+            listen 80;
+            server_name drzeuscapital.com.br www.drzeuscapital.com.br;
+            location / { return 301 https://$host$request_uri; }
+        }
+        server {
+            listen 443 ssl;
+            server_name drzeuscapital.com.br www.drzeuscapital.com.br;
+            ssl_certificate /etc/letsencrypt/live/drzeuscapital.com.br/fullchain.pem;
+            ssl_certificate_key /etc/letsencrypt/live/drzeuscapital.com.br/privkey.pem;
+            location / {
+                proxy_pass http://frontend:80;
+                proxy_http_version 1.1;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+            }
+        }
+        server {
+            listen 80;
+            server_name api.drzeuscapital.com.br;
+            location / { return 301 https://$host$request_uri; }
+        }
+        server {
+            listen 443 ssl;
+            server_name api.drzeuscapital.com.br;
+            ssl_certificate /etc/letsencrypt/live/api.drzeuscapital.com.br/fullchain.pem;
+            ssl_certificate_key /etc/letsencrypt/live/api.drzeuscapital.com.br/privkey.pem;
+            client_max_body_size 50m;
+            location / {
+                proxy_pass http://backend:3000;
+                proxy_http_version 1.1;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+            }
+        }
+        server {
+            listen 80;
+            server_name storage.drzeuscapital.com.br;
+            location / { return 301 https://$host$request_uri; }
+        }
+        server {
+            listen 443 ssl;
+            server_name storage.drzeuscapital.com.br;
+            ssl_certificate /etc/letsencrypt/live/storage.drzeuscapital.com.br/fullchain.pem;
+            ssl_certificate_key /etc/letsencrypt/live/storage.drzeuscapital.com.br/privkey.pem;
+            client_max_body_size 100m;
+            location / {
+                proxy_pass http://minio:9000;
+                proxy_http_version 1.1;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+            }
+        }
+        NGINX
+        else
+          echo "Restoring from $BEST"
+          grep -vE 'proxy_set_header [A-Za-z0-9_-]+ ;$' "$BEST" | awk '
+            /server_name.*cardapionamesa/ { skip=1; depth=0 }
+            skip {
+              if (match($0, /\{/)) depth++
+              if (match($0, /\}/)) { depth--; if (depth <= 0) skip=0 }
+              next
+            }
+            { print }
+          ' > /zeus/nginx.conf
+        fi
+        wc -l /zeus/nginx.conf
+        docker run --rm -v /opt/zeus-backend/nginx.conf:/etc/nginx/conf.d/default.conf:ro nginx:alpine nginx -t
+        docker restart zeus-backend-nginx-1
+        sleep 4
+        docker exec zeus-backend-nginx-1 nginx -t
+        echo RESTORED_OK
+    restart: "no"
