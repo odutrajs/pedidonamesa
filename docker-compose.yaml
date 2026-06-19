@@ -40,6 +40,7 @@ services:
 
   api:
     image: ghcr.io/odutrajs/pedidonamesa-api:latest
+    pull_policy: always
     restart: unless-stopped
     depends_on:
       postgres:
@@ -69,6 +70,7 @@ services:
 
   web:
     image: ghcr.io/odutrajs/pedidonamesa-web:latest
+    pull_policy: always
     restart: unless-stopped
     expose:
       - "80"

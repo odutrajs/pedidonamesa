@@ -100,9 +100,21 @@ Autenticação via JWT no handshake (`auth.token`).
 
 ## Deploy Hostinger VPS
 
-1. Subir `docker-compose.prod.yml` com API, web, postgres, redis, minio, nginx
-2. Usar deploy via GitHub → `docker-compose.yaml` na raiz do repo
-3. Configurar `JWT_SECRET`, credenciais DB e MinIO em variáveis de ambiente
+Deploy automático via GitHub Actions (`.github/workflows/docker.yml`):
+
+1. Push em `main`/`master` → build das imagens no GHCR
+2. Se o build passar → deploy no VPS Hostinger (pull + restart dos containers)
+
+### Configurar no GitHub (uma vez)
+
+Em **Settings → Secrets and variables → Actions**:
+
+| Tipo | Nome | Valor |
+|------|------|-------|
+| Secret | `HOSTINGER_API_KEY` | API key do [hPanel → API](https://hpanel.hostinger.com/profile/api) |
+| Variable | `HOSTINGER_VM_ID` | ID do VPS (ex.: `1769902` — número do hostname `srv1769902.hstgr.cloud`) |
+
+As variáveis de ambiente de produção (`JWT_SECRET`, `DB_PASSWORD`, etc.) ficam no Docker Manager da Hostinger e são preservadas nos deploys.
 
 ## Próximos passos
 
