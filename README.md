@@ -102,7 +102,7 @@ Autenticação via JWT no handshake (`auth.token`).
 
 Deploy automático via GitHub Actions (`.github/workflows/docker.yml`):
 
-1. Push em `main`/`master` → build das imagens no GHCR
+1. Push em `main` → build das imagens no GHCR
 2. Se o build passar → deploy no VPS Hostinger (pull + restart dos containers)
 3. A pipeline aguarda o deploy terminar na Hostinger e valida se api, web e nginx estão rodando
 
