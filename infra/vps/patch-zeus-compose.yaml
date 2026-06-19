@@ -8,13 +8,15 @@ services:
       - sh
       - -c
       - |
-        grep -n 'proxy_set_header' /zeus/nginx.conf || true
-        sed -i -E '/proxy_set_header .* ;$$/d' /zeus/nginx.conf
         sed -i '/server_name cardapionamesa/,/^}/d' /zeus/nginx.conf
-        sed -i '/listen 80;$$/{ N; /server_name cardapionamesa/d; }' /zeus/nginx.conf
-        if grep -q 'cardapionamesa.com' /zeus/nginx.conf; then
-          echo 'cardapionamesa.com ja configurado'
-        else
+        for i in 1 2 3 4 5 6 7 8 9 10; do
+          OUT=$$(docker exec zeus-backend-nginx-1 nginx -t 2>&1) || true
+          echo "$$OUT"
+          echo "$$OUT" | grep -q 'configuration file /etc/nginx/nginx.conf test is successful' && break
+          LINE=$$(echo "$$OUT" | sed -n 's/.*default.conf:\([0-9]*\).*/\1/p' | head -1)
+          [ -n "$$LINE" ] && sed -i "$${LINE}d" /zeus/nginx.conf
+        done
+        if ! grep -q 'cardapionamesa.com' /zeus/nginx.conf; then
           echo 'c2VydmVyIHsKICAgIGxpc3RlbiA4MDsKICAgIHNlcnZlcl9uYW1lIGNhcmRhcGlvbmFtZXNhLmNvbSB3d3cuY2FyZGFwaW9uYW1lc2EuY29tOwogICAgbG9jYXRpb24gLyB7CiAgICAgICAgcHJveHlfcGFzcyBodHRwOi8vMTcyLjE3LjAuMTo4MDgwOwogICAgICAgIHByb3h5X2h0dHBfdmVyc2lvbiAxLjE7CiAgICAgICAgcHJveHlfc2V0X2hlYWRlciBIb3N0ICRob3N0OwogICAgICAgIHByb3h5X3NldF9oZWFkZXIgWC1SZWFsLUlQICRyZW1vdGVfYWRkcjsKICAgICAgICBwcm94eV9zZXRfaGVhZGVyIFgtRm9yd2FyZGVkLUZvciAkcHJveHlfYWRkX3hfZm9yd2FyZGVkX2ZvcjsKICAgICAgICBwcm94eV9zZXRfaGVhZGVyIFgtRm9yd2FyZGVkLVByb3RvICRzY2hlbWU7CiAgICAgICAgcHJveHlfc2V0X2hlYWRlciBVcGdyYWRlICRodHRwX3VwZ3JhZGU7CiAgICAgICAgcHJveHlfc2V0X2hlYWRlciBDb25uZWN0aW9uICJ1cGdyYWRlIjsKICAgIH0KfQo=' | base64 -d >> /zeus/nginx.conf
         fi
         docker exec zeus-backend-nginx-1 nginx -t && docker exec zeus-backend-nginx-1 nginx -s reload && echo OK
