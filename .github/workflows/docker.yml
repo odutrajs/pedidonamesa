@@ -7,6 +7,7 @@ on:
 permissions:
   contents: read
   packages: write
+  actions: read
 
 jobs:
   build:
@@ -48,8 +49,12 @@ jobs:
 
       - name: Make GHCR packages public
         run: |
+          gh api "/user/packages?package_type=container" || true
           for pkg in pedidonamesa-api pedidonamesa-web pedidonamesa-nginx; do
-            gh api --method PUT "/user/packages/container/${pkg}" -f visibility=public
+            gh api --method PATCH "/user/packages/container/${pkg}" \
+              --input - <<< '{"visibility":"public"}' || \
+            gh api --method PUT "/user/packages/container/${pkg}" \
+              -f visibility=public || true
           done
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
