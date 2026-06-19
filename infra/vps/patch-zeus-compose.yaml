@@ -8,12 +8,10 @@ services:
       - sh
       - -c
       - |
-        sed -i '/proxy_set_header Host ;/d' /zeus/nginx.conf
-        sed -i '/proxy_set_header X-Real-IP ;/d' /zeus/nginx.conf
-        sed -i '/proxy_set_header X-Forwarded-For ;/d' /zeus/nginx.conf
-        sed -i '/proxy_set_header X-Forwarded-Proto ;/d' /zeus/nginx.conf
-        sed -i '/proxy_set_header Upgrade ;/d' /zeus/nginx.conf
+        grep -n 'proxy_set_header' /zeus/nginx.conf || true
+        sed -i -E '/proxy_set_header .* ;$$/d' /zeus/nginx.conf
         sed -i '/server_name cardapionamesa/,/^}/d' /zeus/nginx.conf
+        sed -i '/listen 80;$$/{ N; /server_name cardapionamesa/d; }' /zeus/nginx.conf
         if grep -q 'cardapionamesa.com' /zeus/nginx.conf; then
           echo 'cardapionamesa.com ja configurado'
         else
