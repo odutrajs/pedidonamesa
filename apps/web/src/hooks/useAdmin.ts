@@ -1,5 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { OrderDto } from '@pedidonamesa/shared';
 import { http, withAuth } from '../lib/axios';
+import { parsePriceInput } from '../lib/utils';
 import { queryKeys } from '../lib/query-keys';
 import type {
   AdminProduct,
@@ -41,14 +43,97 @@ export function useTables(enabled = true) {
   });
 }
 
+export function useOrders(enabled = true) {
+  const { token } = useAuth();
+  return useQuery({
+    queryKey: queryKeys.orders,
+    queryFn: () =>
+      http.get<OrderDto[]>('/admin/orders', withAuth(token)).then((r) => r.data),
+    enabled: !!token && enabled,
+    staleTime: 15_000,
+  });
+}
+
 export function useCreateCategory() {
   const { token } = useAuth();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (data: CategoryFormValues) =>
-      http.post('/admin/categories', { name: data.name }, withAuth(token)),
+      http.post(
+        '/admin/categories',
+        {
+          name: data.name.trim(),
+          description: data.description.trim() || undefined,
+        },
+        withAuth(token),
+      ),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.categories });
+    },
+  });
+}
+
+export function useUpdateCategory() {
+  const { token } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: CategoryFormValues & { active?: boolean };
+    }) =>
+      http.patch(
+        `/admin/categories/${id}`,
+        {
+          name: data.name.trim(),
+          description: data.description.trim() || undefined,
+          active: data.active,
+        },
+        withAuth(token),
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.categories });
+    },
+  });
+}
+
+export function useReorderCategories() {
+  const { token } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (orderedIds: string[]) =>
+      http
+        .patch<Category[]>('/admin/categories/reorder', { orderedIds }, withAuth(token))
+        .then((r) => r.data),
+    onMutate: async (orderedIds) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.categories });
+      const previous = queryClient.getQueryData<Category[]>(queryKeys.categories);
+
+      if (previous) {
+        const byId = new Map(previous.map((category) => [category.id, category]));
+        const reordered = orderedIds
+          .map((id, index) => {
+            const category = byId.get(id);
+            return category ? { ...category, sortOrder: index + 1 } : null;
+          })
+          .filter((category): category is Category => category !== null);
+
+        queryClient.setQueryData<Category[]>(queryKeys.categories, reordered);
+      }
+
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(queryKeys.categories, context.previous);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.categories });
     },
   });
@@ -80,6 +165,47 @@ export function useCreateProduct() {
       return http
         .post<AdminProduct>('/admin/products', formData, withAuth(token))
         .then((r) => r.data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.products });
+    },
+  });
+}
+
+export function useUpdateProduct() {
+  const { token } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      data,
+      image,
+    }: {
+      id: string;
+      data: ProductFormValues;
+      image: File | null;
+    }) => {
+      const product = await http
+        .patch<AdminProduct>(
+          `/admin/products/${id}`,
+          {
+            name: data.name.trim(),
+            price: parsePriceInput(data.price),
+            categoryId: data.categoryId,
+            description: data.description?.trim() || undefined,
+          },
+          withAuth(token),
+        )
+        .then((r) => r.data);
+
+      if (image) {
+        const formData = new FormData();
+        formData.append('file', image);
+        await http.post(`/admin/products/${id}/image`, formData, withAuth(token));
+      }
+
+      return product;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.products });

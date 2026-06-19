@@ -2,13 +2,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { QrCode } from 'lucide-react';
 import type { CreateOrderInput, ProductDto } from '@pedidonamesa/shared';
+import { PaymentMode } from '@pedidonamesa/shared';
 import { MenuLayout } from '../components/menu/MenuLayout';
 import { CategoryNav } from '../components/menu/CategoryNav';
 import { CartSidebar } from '../components/menu/CartSidebar';
 import { CartDrawer } from '../components/menu/CartDrawer';
 import { ProductCard } from '../components/menu/ProductCard';
+import { PaymentCheckoutModal } from '../components/payment/PaymentCheckoutModal';
 import { ProductCardSkeleton } from '../components/ui/Skeleton';
-import { Toast } from '../components/ui/Toast';
+import { FeedbackModal } from '../components/ui/FeedbackModal';
 import { EmptyState } from '../components/ui/EmptyState';
 import { useMenu, useSubmitOrder } from '../hooks/useMenu';
 
@@ -24,10 +26,13 @@ export function TableMenuPage() {
 
   const [cart, setCart] = useState<CartItem[]>([]);
   const [orderNotes, setOrderNotes] = useState('');
-  const [success, setSuccess] = useState(false);
+  const [orderSuccessOpen, setOrderSuccessOpen] = useState(false);
   const [error, setError] = useState('');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState('');
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [checkoutOrderId, setCheckoutOrderId] = useState<string | null>(null);
+  const [checkoutTotal, setCheckoutTotal] = useState(0);
 
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
 
@@ -97,6 +102,9 @@ export function TableMenuPage() {
     );
   }, []);
 
+  const payBefore = menu?.restaurant.paymentMode === PaymentMode.PAY_BEFORE;
+  const submitLabel = payBefore ? 'Pagar e enviar pedido' : 'Enviar pedido';
+
   const handleSubmitOrder = useCallback(() => {
     if (!token || cart.length === 0) return;
 
@@ -106,18 +114,24 @@ export function TableMenuPage() {
       items: cart.map((item) => ({
         productId: item.product.id,
         quantity: item.quantity,
-        notes: item.notes,
       })),
       notes: orderNotes || undefined,
     };
 
     submitOrder.mutate(payload, {
-      onSuccess: () => {
+      onSuccess: (response) => {
+        if (response.paymentRequired) {
+          setCheckoutOrderId(response.order.id);
+          setCheckoutTotal(response.order.total);
+          setCheckoutOpen(true);
+          setDrawerOpen(false);
+          return;
+        }
+
         setCart([]);
         setOrderNotes('');
         setDrawerOpen(false);
-        setSuccess(true);
-        setTimeout(() => setSuccess(false), 4000);
+        setOrderSuccessOpen(true);
       },
       onError: () => {
         setError('Não foi possível enviar o pedido. Tente novamente.');
@@ -125,9 +139,17 @@ export function TableMenuPage() {
     });
   }, [token, cart, orderNotes, submitOrder]);
 
+  const handlePaymentComplete = useCallback(() => {
+    setCheckoutOpen(false);
+    setCheckoutOrderId(null);
+    setCart([]);
+    setOrderNotes('');
+    setOrderSuccessOpen(true);
+  }, []);
+
   if (isLoading) {
     return (
-      <MenuLayout restaurantName="Cardápio" tableLabel="Carregando...">
+      <MenuLayout>
         <div className="grid gap-4 sm:grid-cols-2">
           {Array.from({ length: 4 }).map((_, i) => (
             <ProductCardSkeleton key={i} />
@@ -139,7 +161,7 @@ export function TableMenuPage() {
 
   if (!menu) {
     return (
-      <MenuLayout restaurantName="Mesa não encontrada" tableLabel="">
+      <MenuLayout>
         <EmptyState
           icon={<QrCode className="h-5 w-5" />}
           title="QR Code inválido"
@@ -153,32 +175,52 @@ export function TableMenuPage() {
     );
   }
 
-  const tableLabel = menu.table.label
-    ? `Mesa ${menu.table.number} — ${menu.table.label}`
-    : `Mesa ${menu.table.number}`;
-
   const cartProps = {
     cart,
     orderNotes,
     total,
     error,
     submitting: submitOrder.isPending,
+    submitLabel,
     onNotesChange: setOrderNotes,
     onUpdateQuantity: updateQuantity,
     onSubmit: handleSubmitOrder,
   };
 
+  const stripeKey =
+    menu.payment.stripePublishableKey ??
+    import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY ??
+    null;
+
   return (
     <>
-      <Toast
-        message="Pedido enviado! A cozinha já recebeu."
-        visible={success}
-        onClose={() => setSuccess(false)}
+      <FeedbackModal
+        open={orderSuccessOpen}
+        onClose={() => setOrderSuccessOpen(false)}
+        variant="success"
+        title="Pedido enviado!"
+        description={
+          payBefore
+            ? 'Pagamento confirmado. A cozinha já recebeu seu pedido e em breve começará o preparo.'
+            : 'Seu pedido foi enviado para a cozinha. Em breve estará pronto para você.'
+        }
+        confirmLabel="Continuar pedindo"
+        onConfirm={() => setOrderSuccessOpen(false)}
       />
 
+      {checkoutOrderId && token && (
+        <PaymentCheckoutModal
+          open={checkoutOpen}
+          tableToken={token}
+          orderId={checkoutOrderId}
+          total={checkoutTotal}
+          stripePublishableKey={stripeKey}
+          onClose={() => setCheckoutOpen(false)}
+          onPaid={handlePaymentComplete}
+        />
+      )}
+
       <MenuLayout
-        restaurantName={menu.restaurant.name}
-        tableLabel={tableLabel}
         categoryNav={
           menu.categories.length > 1 ? (
             <CategoryNav
@@ -200,7 +242,7 @@ export function TableMenuPage() {
                 }}
                 className="section-scroll"
               >
-                <h2 className="mb-4 text-lg font-semibold text-zinc-900">{category.name}</h2>
+                <h2 className="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-50">{category.name}</h2>
                 <div className="grid gap-4 sm:grid-cols-2">
                   {category.products.map((product) => (
                     <ProductCard key={product.id} product={product} onAdd={addToCart} />

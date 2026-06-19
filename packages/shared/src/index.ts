@@ -4,6 +4,37 @@ export enum UserRole {
   WAITER = 'WAITER',
 }
 
+export enum PaymentMode {
+  PAY_BEFORE = 'PAY_BEFORE',
+  PAY_AFTER = 'PAY_AFTER',
+}
+
+export enum PaymentStatus {
+  NOT_REQUIRED = 'NOT_REQUIRED',
+  PENDING = 'PENDING',
+  PAID = 'PAID',
+  FAILED = 'FAILED',
+}
+
+export enum PaymentMethod {
+  PIX = 'PIX',
+  CARD = 'CARD',
+  APPLE_PAY = 'APPLE_PAY',
+  GOOGLE_PAY = 'GOOGLE_PAY',
+}
+
+export const PAYMENT_MODE_LABELS: Record<PaymentMode, string> = {
+  [PaymentMode.PAY_BEFORE]: 'Pagamento antes do pedido',
+  [PaymentMode.PAY_AFTER]: 'Pagamento após o pedido',
+};
+
+export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
+  [PaymentStatus.NOT_REQUIRED]: 'Não exigido',
+  [PaymentStatus.PENDING]: 'Aguardando pagamento',
+  [PaymentStatus.PAID]: 'Pago',
+  [PaymentStatus.FAILED]: 'Falhou',
+};
+
 export enum OrderStatus {
   PENDING = 'PENDING',
   CONFIRMED = 'CONFIRMED',
@@ -97,9 +128,17 @@ export interface OrderDto {
   status: OrderStatus;
   notes: string | null;
   total: number;
+  paymentStatus: PaymentStatus;
+  paymentMethod: PaymentMethod | null;
+  paidAt: string | null;
   createdAt: string;
   updatedAt: string;
   items: OrderItemDto[];
+}
+
+export interface CreateOrderResponse {
+  order: OrderDto;
+  paymentRequired: boolean;
 }
 
 export interface MenuDto {
@@ -107,9 +146,38 @@ export interface MenuDto {
     id: string;
     name: string;
     slug: string;
+    paymentMode: PaymentMode;
+  };
+  payment: {
+    stripePublishableKey: string | null;
   };
   table: TableDto;
   categories: CategoryDto[];
+}
+
+export interface RestaurantSettingsDto {
+  id: string;
+  name: string;
+  paymentMode: PaymentMode;
+}
+
+export interface StripeCheckoutDto {
+  clientSecret: string;
+  publishableKey: string;
+}
+
+export interface PixCheckoutDto {
+  paymentId: string;
+  qrCode: string;
+  qrCodeBase64: string;
+  expiresAt: string | null;
+}
+
+export interface PaymentStatusDto {
+  paymentStatus: PaymentStatus;
+  paymentMethod: PaymentMethod | null;
+  paidAt: string | null;
+  orderStatus: OrderStatus;
 }
 
 export interface CreateOrderItemInput {

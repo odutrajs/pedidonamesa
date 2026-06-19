@@ -2,15 +2,42 @@ import { io, Socket } from 'socket.io-client';
 import { WS_EVENTS } from '@pedidonamesa/shared';
 
 let socket: Socket | null = null;
+let activeToken: string | null = null;
 
-export function connectOrdersSocket(token: string) {
-  if (socket?.connected) {
-    socket.disconnect();
+function getSocketBaseUrl(): string | undefined {
+  const apiUrl = import.meta.env.VITE_API_URL as string | undefined;
+
+  if (apiUrl?.startsWith('http')) {
+    return new URL(apiUrl).origin;
   }
 
-  socket = io('/orders', {
+  if (import.meta.env.DEV) {
+    return 'http://localhost:3000';
+  }
+
+  return undefined;
+}
+
+export function connectOrdersSocket(token: string) {
+  if (socket?.connected && activeToken === token) {
+    return socket;
+  }
+
+  if (socket) {
+    socket.removeAllListeners();
+    socket.disconnect();
+    socket = null;
+  }
+
+  activeToken = token;
+  const baseUrl = getSocketBaseUrl();
+
+  socket = io(`${baseUrl ?? ''}/orders`, {
     auth: { token },
-    transports: ['websocket'],
+    path: '/socket.io',
+    transports: ['websocket', 'polling'],
+    reconnection: true,
+    reconnectionAttempts: 5,
   });
 
   socket.on('connect', () => {
@@ -26,7 +53,9 @@ export function getOrdersSocket() {
 
 export function disconnectOrdersSocket() {
   if (socket) {
+    socket.removeAllListeners();
     socket.disconnect();
     socket = null;
   }
+  activeToken = null;
 }

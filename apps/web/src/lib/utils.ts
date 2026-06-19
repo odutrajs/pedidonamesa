@@ -18,6 +18,16 @@ export function formatTime(date: string) {
   }).format(new Date(date));
 }
 
+export function formatDateTime(date: string) {
+  return new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(date));
+}
+
 export function formatRelativeTime(date: string) {
   const diffMs = Date.now() - new Date(date).getTime();
   const diffMin = Math.floor(diffMs / 60000);

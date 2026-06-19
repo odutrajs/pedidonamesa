@@ -6,11 +6,15 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import {
+  CreateOrderResponse,
   KITCHEN_ACTIVE_STATUSES,
   OrderItemStatus,
   OrderStatus,
+  PaymentMethod,
+  PaymentMode,
+  PaymentStatus,
 } from '@pedidonamesa/shared';
-import { Order, OrderItem, Product, Table } from '../entities';
+import { Order, OrderItem, Table, Product } from '../entities';
 import { CreateOrderDto, UpdateOrderItemStatusDto, UpdateOrderStatusDto } from './dto/order.dto';
 import { mapOrder } from './order.mapper';
 import { OrdersGateway } from '../websocket/orders.gateway';
@@ -29,9 +33,10 @@ export class OrdersService {
     private readonly ordersGateway: OrdersGateway,
   ) {}
 
-  async createFromTableToken(tableToken: string, dto: CreateOrderDto) {
+  async createFromTableToken(tableToken: string, dto: CreateOrderDto): Promise<CreateOrderResponse> {
     const table = await this.tablesRepo.findOne({
       where: { token: tableToken, active: true },
+      relations: ['restaurant'],
     });
 
     if (!table) {
@@ -65,12 +70,19 @@ export class OrdersService {
       });
     }
 
+    const paymentRequired = table.restaurant.paymentMode === PaymentMode.PAY_BEFORE;
+
     const order = this.ordersRepo.create({
       tableId: table.id,
       restaurantId: table.restaurantId,
       status: OrderStatus.PENDING,
       notes: dto.notes ?? null,
       total,
+      paymentStatus: paymentRequired ? PaymentStatus.PENDING : PaymentStatus.NOT_REQUIRED,
+      paymentMethod: null,
+      stripePaymentIntentId: null,
+      mercadoPagoPaymentId: null,
+      paidAt: null,
       items: orderItems as OrderItem[],
     });
 
@@ -78,7 +90,44 @@ export class OrdersService {
     const full = await this.findById(saved.id);
 
     const mapped = mapOrder(full, table);
-    this.ordersGateway.emitOrderCreated(table.restaurantId, mapped);
+
+    if (!paymentRequired) {
+      this.ordersGateway.emitOrderCreated(table.restaurantId, mapped);
+    }
+
+    return {
+      order: mapped,
+      paymentRequired,
+    };
+  }
+
+  async markOrderPaid(
+    orderId: string,
+    paymentMethod: PaymentMethod,
+    stripePaymentIntentId?: string,
+  ) {
+    const order = await this.findById(orderId);
+
+    if (order.paymentStatus === PaymentStatus.PAID) {
+      return mapOrder(order);
+    }
+
+    if (order.paymentStatus === PaymentStatus.NOT_REQUIRED) {
+      throw new BadRequestException('Este pedido não exige pagamento antecipado');
+    }
+
+    order.paymentStatus = PaymentStatus.PAID;
+    order.paymentMethod = paymentMethod;
+    order.paidAt = new Date();
+    if (stripePaymentIntentId) {
+      order.stripePaymentIntentId = stripePaymentIntentId;
+    }
+
+    await this.ordersRepo.save(order);
+
+    const full = await this.findById(order.id);
+    const mapped = mapOrder(full);
+    this.ordersGateway.emitOrderCreated(order.restaurantId, mapped);
 
     return mapped;
   }
@@ -93,7 +142,9 @@ export class OrdersService {
       order: { createdAt: 'ASC' },
     });
 
-    return orders.map((o) => mapOrder(o));
+    return orders
+      .filter((order) => this.isVisibleInKitchen(order))
+      .map((o) => mapOrder(o));
   }
 
   async getActiveOrdersForRestaurant(restaurantId: string) {
@@ -109,6 +160,17 @@ export class OrdersService {
       },
       relations: ['items', 'table'],
       order: { createdAt: 'DESC' },
+    });
+
+    return orders.map((o) => mapOrder(o));
+  }
+
+  async getRestaurantOrders(restaurantId: string, limit = 100) {
+    const orders = await this.ordersRepo.find({
+      where: { restaurantId },
+      relations: ['items', 'table'],
+      order: { createdAt: 'DESC' },
+      take: limit,
     });
 
     return orders.map((o) => mapOrder(o));
@@ -206,6 +268,13 @@ export class OrdersService {
     if (anyPreparing) return OrderStatus.PREPARING;
 
     return OrderStatus.PENDING;
+  }
+
+  private isVisibleInKitchen(order: Order): boolean {
+    return (
+      order.paymentStatus === PaymentStatus.NOT_REQUIRED ||
+      order.paymentStatus === PaymentStatus.PAID
+    );
   }
 
   private validateOrderStatusTransition(current: OrderStatus, next: OrderStatus) {

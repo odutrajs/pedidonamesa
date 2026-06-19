@@ -23,13 +23,13 @@ const features = [
 
 export function FeaturesSection() {
   return (
-    <section className="border-b border-zinc-100 bg-zinc-50 py-16 md:py-24">
+    <section className="border-b border-zinc-100 bg-zinc-50 py-16 dark:border-zinc-800 dark:bg-zinc-900/50 md:py-24">
       <div className="mx-auto max-w-6xl px-4">
         <div className="mx-auto max-w-2xl text-center">
-          <h2 className="text-3xl font-semibold tracking-tight text-zinc-900">
+          <h2 className="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
             Tudo que seu restaurante precisa
           </h2>
-          <p className="mt-3 text-zinc-600">
+          <p className="mt-3 text-zinc-600 dark:text-zinc-400">
             Do QR na mesa ao pedido na cozinha — sem impressora, sem fila, sem complicação.
           </p>
         </div>
@@ -38,13 +38,15 @@ export function FeaturesSection() {
           {features.map((feature) => (
             <div
               key={feature.title}
-              className="rounded-xl border border-zinc-200 bg-white p-6 transition hover:border-zinc-300"
+              className="rounded-xl border border-zinc-200 bg-white p-6 transition hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700"
             >
-              <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-brand-50">
-                <feature.icon className="h-5 w-5 text-brand-600" />
+              <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-brand-50 dark:bg-brand-950">
+                <feature.icon className="h-5 w-5 text-brand-600 dark:text-brand-400" />
               </div>
-              <h3 className="font-semibold text-zinc-900">{feature.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-zinc-600">{feature.description}</p>
+              <h3 className="font-semibold text-zinc-900 dark:text-zinc-50">{feature.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+                {feature.description}
+              </p>
             </div>
           ))}
         </div>

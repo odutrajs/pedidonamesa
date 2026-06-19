@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './auth/auth.module';
 import { MenuModule } from './menu/menu.module';
 import { OrdersModule } from './orders/orders.module';
+import { PaymentsModule } from './payments/payments.module';
 import { WebsocketModule } from './websocket/websocket.module';
 import { AdminModule } from './admin/admin.module';
 import { StorageModule } from './storage/storage.module';
@@ -34,6 +35,7 @@ import * as entities from './entities';
     AuthModule,
     MenuModule,
     OrdersModule,
+    PaymentsModule,
     WebsocketModule,
     AdminModule,
     StorageModule,

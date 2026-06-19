@@ -57,10 +57,10 @@ export function KitchenPage() {
           icon={<ChefHat className="h-5 w-5 animate-pulse" />}
           title="Aguardando pedidos..."
           description="Novos pedidos aparecem aqui automaticamente em tempo real."
-          className="rounded-xl border border-zinc-200 bg-white py-16"
+          className="rounded-xl border border-zinc-200 bg-white py-16 dark:border-zinc-800 dark:bg-zinc-900"
         />
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid auto-rows-fr gap-4 md:grid-cols-2 xl:grid-cols-3">
           {orders.map((order) => (
             <OrderCard
               key={order.id}

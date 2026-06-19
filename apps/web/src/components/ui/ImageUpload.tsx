@@ -87,7 +87,7 @@ export function ImageUpload({
 
   return (
     <div className={className}>
-      <p className="mb-1.5 block text-sm font-medium text-zinc-700">{label}</p>
+      <p className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">{label}</p>
 
       {displayPreview ? (
         <div className="flex items-start gap-4">
@@ -95,13 +95,13 @@ export function ImageUpload({
             <img
               src={displayPreview}
               alt="Prévia da imagem"
-              className="h-28 w-28 rounded-xl object-cover ring-1 ring-zinc-200"
+              className="h-28 w-28 rounded-xl object-cover ring-1 ring-zinc-200 dark:ring-zinc-700"
             />
             {!disabled && (
               <button
                 type="button"
                 onClick={handleRemove}
-                className="absolute -right-2 -top-2 flex h-7 w-7 items-center justify-center rounded-full bg-zinc-900 text-white shadow-md transition hover:bg-zinc-700"
+                className="absolute -right-2 -top-2 flex h-7 w-7 items-center justify-center rounded-full bg-zinc-900 text-white shadow-md transition hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
                 aria-label="Remover imagem"
               >
                 <X className="h-4 w-4" />
@@ -109,14 +109,14 @@ export function ImageUpload({
             )}
           </div>
           <div className="flex flex-col gap-2 pt-1">
-            <p className="text-sm text-zinc-600">
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
               {value?.name ?? 'Imagem selecionada'}
             </p>
             <button
               type="button"
               disabled={disabled}
               onClick={() => inputRef.current?.click()}
-              className="text-sm font-medium text-brand-600 hover:text-brand-700 disabled:opacity-50"
+              className="text-sm font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300 disabled:opacity-50"
             >
               Trocar imagem
             </button>
@@ -147,24 +147,26 @@ export function ImageUpload({
           onDrop={handleDrop}
           onClick={() => !disabled && inputRef.current?.click()}
           className={cn(
-            'flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-8 text-center transition',
+            'group flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-8 text-center transition-colors',
             dragOver
-              ? 'border-brand-500 bg-brand-50'
-              : 'border-zinc-200 bg-zinc-50 hover:border-brand-300 hover:bg-brand-50/50',
+              ? 'border-brand-500 bg-brand-50 dark:border-brand-500 dark:bg-zinc-800'
+              : 'border-zinc-200 bg-zinc-50 hover:border-zinc-300 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900/50 dark:hover:border-zinc-600 dark:hover:bg-zinc-800',
             disabled && 'pointer-events-none opacity-50',
           )}
         >
-          <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-zinc-200">
+          <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-zinc-200 transition-colors group-hover:bg-zinc-50 dark:bg-zinc-800 dark:ring-zinc-600 dark:group-hover:bg-zinc-700">
             {dragOver ? (
-              <Upload className="h-5 w-5 text-brand-600" />
+              <Upload className="h-5 w-5 text-brand-600 dark:text-brand-400" />
             ) : (
-              <ImagePlus className="h-5 w-5 text-zinc-400" />
+              <ImagePlus className="h-5 w-5 text-zinc-400 transition-colors group-hover:text-zinc-600 dark:text-zinc-500 dark:group-hover:text-zinc-300" />
             )}
           </div>
-          <p className="text-sm font-medium text-zinc-800">
+          <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
             Arraste uma imagem ou clique para selecionar
           </p>
-          <p className="mt-1 text-xs text-zinc-500">JPG, PNG, WebP ou GIF · até {MAX_SIZE_MB} MB</p>
+          <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+            JPG, PNG, WebP ou GIF · até {MAX_SIZE_MB} MB
+          </p>
         </div>
       )}
 
@@ -181,7 +183,7 @@ export function ImageUpload({
         }}
       />
 
-      {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+      {error && <p className="mt-2 text-sm text-red-600 dark:text-red-400">{error}</p>}
     </div>
   );
 }

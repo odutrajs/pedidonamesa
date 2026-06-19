@@ -6,6 +6,7 @@ import {
   UpdateDateColumn,
   OneToMany,
 } from 'typeorm';
+import { PaymentMode } from '@pedidonamesa/shared';
 import { User } from './user.entity';
 import { Table } from './table.entity';
 import { Category } from './category.entity';
@@ -26,6 +27,9 @@ export class Restaurant {
 
   @Column({ default: true })
   active: boolean;
+
+  @Column({ type: 'enum', enum: PaymentMode, default: PaymentMode.PAY_AFTER })
+  paymentMode: PaymentMode;
 
   @OneToMany(() => User, (user) => user.restaurant)
   users: User[];

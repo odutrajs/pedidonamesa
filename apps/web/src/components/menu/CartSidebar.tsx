@@ -17,6 +17,7 @@ interface CartContentProps {
   total: number;
   error: string;
   submitting: boolean;
+  submitLabel?: string;
   onNotesChange: (notes: string) => void;
   onUpdateQuantity: (productId: string, quantity: number) => void;
   onSubmit: () => void;
@@ -28,13 +29,14 @@ export const CartContent = memo(function CartContent({
   total,
   error,
   submitting,
+  submitLabel = 'Enviar pedido',
   onNotesChange,
   onUpdateQuantity,
   onSubmit,
 }: CartContentProps) {
   return (
     <>
-      <h2 className="text-lg font-semibold text-zinc-900">Seu pedido</h2>
+      <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">Seu pedido</h2>
 
       {cart.length === 0 ? (
         <EmptyState
@@ -48,18 +50,18 @@ export const CartContent = memo(function CartContent({
           {cart.map((item) => (
             <li
               key={item.product.id}
-              className="flex items-center justify-between gap-3 border-b border-zinc-100 pb-3 last:border-0"
+              className="flex items-center justify-between gap-3 border-b border-zinc-100 pb-3 last:border-0 dark:border-zinc-800"
             >
               <div className="min-w-0 flex-1">
-                <p className="truncate font-medium text-zinc-900">{item.product.name}</p>
-                <p className="text-sm text-zinc-500">
+                <p className="truncate font-medium text-zinc-900 dark:text-zinc-50">{item.product.name}</p>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400">
                   {formatCurrency(item.product.price)} × {item.quantity}
                 </p>
               </div>
               <div className="flex items-center gap-1.5">
                 <button
                   type="button"
-                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 text-zinc-600 transition hover:bg-zinc-50"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 text-zinc-600 transition hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
                   onClick={() => onUpdateQuantity(item.product.id, item.quantity - 1)}
                   aria-label="Diminuir quantidade"
                 >
@@ -68,7 +70,7 @@ export const CartContent = memo(function CartContent({
                 <span className="w-6 text-center text-sm font-medium">{item.quantity}</span>
                 <button
                   type="button"
-                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 text-zinc-600 transition hover:bg-zinc-50"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 text-zinc-600 transition hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
                   onClick={() => onUpdateQuantity(item.product.id, item.quantity + 1)}
                   aria-label="Aumentar quantidade"
                 >
@@ -80,7 +82,7 @@ export const CartContent = memo(function CartContent({
         </ul>
       )}
 
-      <div className="mt-4 border-t border-zinc-100 pt-4">
+      <div className="mt-4 border-t border-zinc-100 pt-4 dark:border-zinc-800">
         <Label>Observações</Label>
         <Textarea
           placeholder="Ex: sem cebola, gelado..."
@@ -90,18 +92,18 @@ export const CartContent = memo(function CartContent({
       </div>
 
       <div className="mt-4 flex items-center justify-between">
-        <span className="font-medium text-zinc-700">Total</span>
-        <span className="text-xl font-semibold text-zinc-900">{formatCurrency(total)}</span>
+        <span className="font-medium text-zinc-700 dark:text-zinc-300">Total</span>
+        <span className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">{formatCurrency(total)}</span>
       </div>
 
-      {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+      {error && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
 
       <Button
         className="mt-4 w-full"
         disabled={cart.length === 0 || submitting}
         onClick={onSubmit}
       >
-        {submitting ? 'Enviando...' : 'Enviar pedido'}
+        {submitting ? 'Enviando...' : submitLabel}
       </Button>
     </>
   );
@@ -113,6 +115,7 @@ interface CartSidebarProps {
   total: number;
   error: string;
   submitting: boolean;
+  submitLabel?: string;
   onNotesChange: (notes: string) => void;
   onUpdateQuantity: (productId: string, quantity: number) => void;
   onSubmit: () => void;
@@ -120,7 +123,7 @@ interface CartSidebarProps {
 
 export const CartSidebar = memo(function CartSidebar(props: CartSidebarProps) {
   return (
-    <aside className="sticky top-36 hidden rounded-xl border border-zinc-200 bg-white p-5 lg:block">
+    <aside className="sticky top-20 hidden rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900 lg:block">
       <CartContent {...props} />
     </aside>
   );

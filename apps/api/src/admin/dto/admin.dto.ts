@@ -1,11 +1,13 @@
 import { Transform, Type } from 'class-transformer';
 import {
+  IsArray,
   IsBoolean,
   IsInt,
   IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
+  IsUUID,
   Min,
 } from 'class-validator';
 
@@ -48,6 +50,12 @@ export class UpdateCategoryDto {
   @IsOptional()
   @IsBoolean()
   active?: boolean;
+}
+
+export class ReorderCategoriesDto {
+  @IsArray()
+  @IsUUID('4', { each: true })
+  orderedIds: string[];
 }
 
 export class CreateProductDto {

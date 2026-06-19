@@ -17,6 +17,7 @@ import { UserRole } from '@pedidonamesa/shared';
 import { JwtAuthGuard, assertRole } from '../auth/jwt-auth.guard';
 import { User } from '../entities/user.entity';
 import { AdminService } from './admin.service';
+import { OrdersService } from '../orders/orders.service';
 import {
   CreateCategoryDto,
   CreateProductDto,
@@ -24,7 +25,9 @@ import {
   UpdateCategoryDto,
   UpdateProductDto,
   UpdateTableDto,
+  ReorderCategoriesDto,
 } from './dto/admin.dto';
+import { UpdatePaymentSettingsDto } from '../payments/dto/payment.dto';
 
 const imageUploadOptions = {
   limits: { fileSize: 5 * 1024 * 1024 },
@@ -44,7 +47,16 @@ const imageUploadOptions = {
 @Controller('admin')
 @UseGuards(JwtAuthGuard)
 export class AdminController {
-  constructor(private readonly adminService: AdminService) {}
+  constructor(
+    private readonly adminService: AdminService,
+    private readonly ordersService: OrdersService,
+  ) {}
+
+  @Get('orders')
+  getOrders(@Req() req: { user: User }) {
+    assertRole(req.user, [UserRole.ADMIN]);
+    return this.ordersService.getRestaurantOrders(req.user.restaurantId);
+  }
 
   @Get('categories')
   getCategories(@Req() req: { user: User }) {
@@ -56,6 +68,12 @@ export class AdminController {
   createCategory(@Req() req: { user: User }, @Body() dto: CreateCategoryDto) {
     assertRole(req.user, [UserRole.ADMIN]);
     return this.adminService.createCategory(req.user.restaurantId, dto);
+  }
+
+  @Patch('categories/reorder')
+  reorderCategories(@Req() req: { user: User }, @Body() dto: ReorderCategoriesDto) {
+    assertRole(req.user, [UserRole.ADMIN]);
+    return this.adminService.reorderCategories(req.user.restaurantId, dto.orderedIds);
   }
 
   @Patch('categories/:id')
@@ -145,5 +163,17 @@ export class AdminController {
   regenerateToken(@Param('id') id: string, @Req() req: { user: User }) {
     assertRole(req.user, [UserRole.ADMIN]);
     return this.adminService.regenerateTableToken(id, req.user.restaurantId);
+  }
+
+  @Get('settings')
+  getSettings(@Req() req: { user: User }) {
+    assertRole(req.user, [UserRole.ADMIN]);
+    return this.adminService.getRestaurantSettings(req.user.restaurantId);
+  }
+
+  @Patch('settings')
+  updateSettings(@Req() req: { user: User }, @Body() dto: UpdatePaymentSettingsDto) {
+    assertRole(req.user, [UserRole.ADMIN]);
+    return this.adminService.updateRestaurantSettings(req.user.restaurantId, dto);
   }
 }

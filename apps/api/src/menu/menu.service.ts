@@ -67,6 +67,10 @@ export class MenuService {
         id: table.restaurant.id,
         name: table.restaurant.name,
         slug: table.restaurant.slug,
+        paymentMode: table.restaurant.paymentMode,
+      },
+      payment: {
+        stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY ?? null,
       },
       table: {
         id: table.id,

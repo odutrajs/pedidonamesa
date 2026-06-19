@@ -13,9 +13,4 @@ export function useMenu(token: string | undefined) {
   });
 }
 
-export function useSubmitOrder(token: string | undefined) {
-  return useMutation({
-    mutationFn: (payload: CreateOrderInput) =>
-      http.post(`/orders/mesa/${token}`, payload).then((r) => r.data),
-  });
-}
+export { useSubmitOrder } from './usePayment';

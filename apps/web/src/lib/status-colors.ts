@@ -1,4 +1,4 @@
-import { OrderStatus } from '@pedidonamesa/shared';
+import { OrderItemStatus, OrderStatus } from '@pedidonamesa/shared';
 
 export const ORDER_STATUS_ACCENT: Record<OrderStatus, string> = {
   [OrderStatus.PENDING]: 'border-l-amber-500',
@@ -16,4 +16,15 @@ export const ORDER_STATUS_BADGE: Record<OrderStatus, 'warning' | 'info' | 'defau
   [OrderStatus.READY]: 'success',
   [OrderStatus.DELIVERED]: 'muted',
   [OrderStatus.CANCELLED]: 'danger',
+};
+
+export const ORDER_ITEM_STATUS_BADGE: Record<
+  OrderItemStatus,
+  'warning' | 'info' | 'default' | 'success' | 'muted' | 'danger'
+> = {
+  [OrderItemStatus.PENDING]: 'warning',
+  [OrderItemStatus.PREPARING]: 'default',
+  [OrderItemStatus.READY]: 'success',
+  [OrderItemStatus.DELIVERED]: 'muted',
+  [OrderItemStatus.CANCELLED]: 'danger',
 };

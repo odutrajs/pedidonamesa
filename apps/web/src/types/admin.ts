@@ -39,4 +39,5 @@ export interface TableFormValues {
 
 export interface CategoryFormValues {
   name: string;
+  description: string;
 }

@@ -6,31 +6,49 @@ import {
   OrderItemStatus,
   OrderStatus,
 } from '@pedidonamesa/shared';
-import { Check, Circle, Clock } from 'lucide-react';
+import { Clock } from 'lucide-react';
 import { formatCurrency, formatRelativeTime } from '../../lib/utils';
-import { ORDER_STATUS_ACCENT, ORDER_STATUS_BADGE } from '../../lib/status-colors';
+import {
+  ORDER_ITEM_STATUS_BADGE,
+  ORDER_STATUS_ACCENT,
+  ORDER_STATUS_BADGE,
+} from '../../lib/status-colors';
 import { cn } from '../../lib/cn';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
-
-function ItemStatusIcon({ status }: { status: OrderItemStatus }) {
-  if (status === OrderItemStatus.DELIVERED) {
-    return <Check className="h-4 w-4 text-emerald-600" />;
-  }
-  if (status === OrderItemStatus.READY) {
-    return <Check className="h-4 w-4 text-emerald-500" />;
-  }
-  if (status === OrderItemStatus.PREPARING) {
-    return <Clock className="h-4 w-4 text-orange-500" />;
-  }
-  return <Circle className="h-4 w-4 text-zinc-300" />;
-}
 
 interface OrderCardProps {
   order: OrderDto;
   onUpdateOrder: (id: string, status: OrderStatus) => void;
   onUpdateItem: (itemId: string, status: OrderItemStatus) => void;
   isUpdating: boolean;
+}
+
+function getPrimaryOrderAction(status: OrderStatus) {
+  switch (status) {
+    case OrderStatus.PENDING:
+    case OrderStatus.CONFIRMED:
+      return { label: 'Iniciar preparo', next: OrderStatus.PREPARING, variant: 'primary' as const };
+    case OrderStatus.PREPARING:
+      return { label: 'Tudo pronto', next: OrderStatus.READY, variant: 'success' as const };
+    case OrderStatus.READY:
+      return { label: 'Entregue na mesa', next: OrderStatus.DELIVERED, variant: 'primary' as const };
+    default:
+      return null;
+  }
+}
+
+function getItemAction(status: OrderItemStatus) {
+  switch (status) {
+    case OrderItemStatus.PENDING:
+      return { label: 'Preparar', next: OrderItemStatus.PREPARING, variant: 'outline' as const };
+    case OrderItemStatus.PREPARING:
+      return { label: 'Pronto', next: OrderItemStatus.READY, variant: 'success' as const };
+    case OrderItemStatus.READY:
+      return { label: 'Entregue', next: OrderItemStatus.DELIVERED, variant: 'primary' as const };
+    default:
+      return null;
+  }
 }
 
 export const OrderCard = memo(function OrderCard({
@@ -43,146 +61,109 @@ export const OrderCard = memo(function OrderCard({
     ? `Mesa ${order.tableNumber} — ${order.tableLabel}`
     : `Mesa ${order.tableNumber}`;
 
+  const primaryAction = getPrimaryOrderAction(order.status);
+  const canCancel =
+    order.status !== OrderStatus.CANCELLED && order.status !== OrderStatus.DELIVERED;
+
   return (
     <article
       className={cn(
-        'overflow-hidden rounded-xl border border-zinc-200 border-l-4 bg-white',
+        'flex h-full flex-col overflow-hidden rounded-xl border border-zinc-200 border-l-4 bg-white shadow-xs dark:border-zinc-800 dark:bg-zinc-900',
         ORDER_STATUS_ACCENT[order.status],
       )}
     >
-      <div className="border-b border-zinc-100 px-4 py-4">
+      <header className="border-b border-zinc-100 px-4 py-4 dark:border-zinc-800">
         <div className="flex items-start justify-between gap-3">
-          <div>
-            <h2 className="text-2xl font-semibold text-zinc-900">{tableName}</h2>
-            <p className="mt-0.5 text-sm text-zinc-500">
-              {formatRelativeTime(order.createdAt)} · {ORDER_STATUS_LABELS[order.status]}
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">{tableName}</h2>
+              <Badge variant={ORDER_STATUS_BADGE[order.status]}>
+                {ORDER_STATUS_LABELS[order.status]}
+              </Badge>
+            </div>
+            <p className="mt-1 flex items-center gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
+              <Clock className="h-3.5 w-3.5 shrink-0" />
+              {formatRelativeTime(order.createdAt)}
             </p>
           </div>
-          <div className="text-right">
-            <p className="text-lg font-semibold text-zinc-900">{formatCurrency(order.total)}</p>
-            <Badge variant={ORDER_STATUS_BADGE[order.status]} className="mt-1">
-              {ORDER_STATUS_LABELS[order.status]}
-            </Badge>
-          </div>
+          <p className="shrink-0 text-lg font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">
+            {formatCurrency(order.total)}
+          </p>
         </div>
 
         {order.notes && (
-          <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800 ring-1 ring-amber-200">
-            Obs: {order.notes}
+          <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900 ring-1 ring-amber-200 dark:bg-amber-950 dark:text-amber-100 dark:ring-amber-800">
+            <span className="font-semibold">Obs:</span> {order.notes}
           </p>
         )}
-      </div>
+      </header>
 
-      <ul className="divide-y divide-zinc-100 px-4">
-        {order.items.map((item) => (
-          <li key={item.id} className="flex items-start justify-between gap-3 py-3">
-            <div className="flex gap-3">
-              <div className="mt-0.5">
-                <ItemStatusIcon status={item.status} />
+      <ul className="flex-1 divide-y divide-zinc-100 dark:divide-zinc-800">
+        {order.items.map((item) => {
+          const itemAction = getItemAction(item.status);
+
+          return (
+            <li key={item.id} className="flex items-center gap-3 px-4 py-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-sm font-bold text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+                {item.quantity}x
               </div>
-              <div>
-                <p className="font-medium text-zinc-900">
-                  {item.quantity}x {item.productName}
-                </p>
+
+              <div className="min-w-0 flex-1">
+                <p className="font-medium leading-snug text-zinc-900 dark:text-zinc-50">{item.productName}</p>
                 {item.notes && (
-                  <p className="mt-0.5 text-sm text-zinc-500">Obs: {item.notes}</p>
+                  <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">
+                    <span className="font-medium text-zinc-600 dark:text-zinc-300">Obs:</span> {item.notes}
+                  </p>
                 )}
-                <p className="mt-0.5 text-xs text-zinc-400">
+                <Badge
+                  variant={ORDER_ITEM_STATUS_BADGE[item.status]}
+                  className="mt-1.5"
+                >
                   {ORDER_ITEM_STATUS_LABELS[item.status]}
-                </p>
+                </Badge>
               </div>
-            </div>
-            <div className="flex shrink-0 flex-col gap-1.5">
-              {item.status === OrderItemStatus.PENDING && (
+
+              {itemAction && (
                 <Button
-                  variant="outline"
+                  variant={itemAction.variant}
                   size="sm"
-                  className="min-h-[44px]"
+                  className="min-h-[40px] shrink-0 px-3"
                   disabled={isUpdating}
-                  onClick={() => onUpdateItem(item.id, OrderItemStatus.PREPARING)}
+                  onClick={() => onUpdateItem(item.id, itemAction.next)}
                 >
-                  Preparar
+                  {itemAction.label}
                 </Button>
               )}
-              {item.status === OrderItemStatus.PREPARING && (
-                <Button
-                  variant="success"
-                  size="sm"
-                  className="min-h-[44px]"
-                  disabled={isUpdating}
-                  onClick={() => onUpdateItem(item.id, OrderItemStatus.READY)}
-                >
-                  Pronto
-                </Button>
-              )}
-              {item.status === OrderItemStatus.READY && (
-                <Button
-                  variant="primary"
-                  size="sm"
-                  className="min-h-[44px]"
-                  disabled={isUpdating}
-                  onClick={() => onUpdateItem(item.id, OrderItemStatus.DELIVERED)}
-                >
-                  Entregue
-                </Button>
-              )}
-            </div>
-          </li>
-        ))}
+            </li>
+          );
+        })}
       </ul>
 
-      <div className="flex flex-wrap gap-2 border-t border-zinc-100 p-4">
-        {order.status === OrderStatus.PENDING && (
-          <Button
-            variant="outline"
-            className="min-h-[44px]"
-            disabled={isUpdating}
-            onClick={() => onUpdateOrder(order.id, OrderStatus.CONFIRMED)}
-          >
-            Confirmar
-          </Button>
-        )}
-        {(order.status === OrderStatus.PENDING || order.status === OrderStatus.CONFIRMED) && (
-          <Button
-            variant="primary"
-            className="min-h-[44px]"
-            disabled={isUpdating}
-            onClick={() => onUpdateOrder(order.id, OrderStatus.PREPARING)}
-          >
-            Iniciar preparo
-          </Button>
-        )}
-        {order.status === OrderStatus.PREPARING && (
-          <Button
-            variant="success"
-            className="min-h-[44px]"
-            disabled={isUpdating}
-            onClick={() => onUpdateOrder(order.id, OrderStatus.READY)}
-          >
-            Tudo pronto
-          </Button>
-        )}
-        {order.status === OrderStatus.READY && (
-          <Button
-            variant="primary"
-            className="min-h-[44px]"
-            disabled={isUpdating}
-            onClick={() => onUpdateOrder(order.id, OrderStatus.DELIVERED)}
-          >
-            Entregue na mesa
-          </Button>
-        )}
-        {order.status !== OrderStatus.CANCELLED && order.status !== OrderStatus.DELIVERED && (
-          <Button
-            variant="danger"
-            className="min-h-[44px]"
-            disabled={isUpdating}
-            onClick={() => onUpdateOrder(order.id, OrderStatus.CANCELLED)}
-          >
-            Cancelar
-          </Button>
-        )}
-      </div>
+      {primaryAction && (
+        <footer className="mt-auto border-t border-zinc-100 bg-zinc-50/80 p-4 dark:border-zinc-800 dark:bg-zinc-800/50">
+          <div className="flex flex-col gap-2">
+            <Button
+              variant={primaryAction.variant}
+              className="min-h-[44px] w-full"
+              disabled={isUpdating}
+              onClick={() => onUpdateOrder(order.id, primaryAction.next)}
+            >
+              {primaryAction.label}
+            </Button>
+
+            {canCancel && (
+              <Button
+                variant="outline"
+                className="min-h-[44px] w-full border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:border-red-800 dark:hover:bg-red-950"
+                disabled={isUpdating}
+                onClick={() => onUpdateOrder(order.id, OrderStatus.CANCELLED)}
+              >
+                Cancelar pedido
+              </Button>
+            )}
+          </div>
+        </footer>
+      )}
     </article>
   );
 });

@@ -18,7 +18,7 @@ const AdminPage = lazy(() =>
 );
 
 const PageLoader = () => (
-  <div className="flex min-h-[40vh] items-center justify-center text-stone-500">
+  <div className="flex min-h-[40vh] items-center justify-center text-zinc-500 dark:text-zinc-400">
     Carregando...
   </div>
 );
@@ -38,7 +38,7 @@ export function App() {
             </Route>
 
             <Route element={<ProtectedRoute roles={['ADMIN']} />}>
-              <Route path="/admin" element={<AdminPage />} />
+              <Route path="/admin/*" element={<AdminPage />} />
             </Route>
 
             <Route path="*" element={<Navigate to="/" replace />} />

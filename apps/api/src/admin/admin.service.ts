@@ -1,8 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
-import { Category, Product, Table } from '../entities';
+import { Category, Product, Restaurant, Table } from '../entities';
 import { StorageService } from '../storage/storage.service';
 import {
   CreateCategoryDto,
@@ -12,6 +12,7 @@ import {
   UpdateProductDto,
   UpdateTableDto,
 } from './dto/admin.dto';
+import { UpdatePaymentSettingsDto } from '../payments/dto/payment.dto';
 
 @Injectable()
 export class AdminService {
@@ -22,21 +23,29 @@ export class AdminService {
     private readonly productsRepo: Repository<Product>,
     @InjectRepository(Table)
     private readonly tablesRepo: Repository<Table>,
+    @InjectRepository(Restaurant)
+    private readonly restaurantsRepo: Repository<Restaurant>,
     private readonly storage: StorageService,
   ) {}
 
   getCategories(restaurantId: string) {
     return this.categoriesRepo.find({
       where: { restaurantId },
-      order: { sortOrder: 'ASC' },
+      order: { sortOrder: 'ASC', name: 'ASC' },
     });
   }
 
-  createCategory(restaurantId: string, dto: CreateCategoryDto) {
+  async createCategory(restaurantId: string, dto: CreateCategoryDto) {
+    const last = await this.categoriesRepo.findOne({
+      where: { restaurantId },
+      order: { sortOrder: 'DESC' },
+    });
+    const nextSortOrder = (last?.sortOrder ?? 0) + 1;
+
     const category = this.categoriesRepo.create({
       ...dto,
       restaurantId,
-      sortOrder: dto.sortOrder ?? 0,
+      sortOrder: dto.sortOrder ?? nextSortOrder,
     });
     return this.categoriesRepo.save(category);
   }
@@ -46,6 +55,34 @@ export class AdminService {
     if (!category) throw new NotFoundException('Categoria não encontrada');
     Object.assign(category, dto);
     return this.categoriesRepo.save(category);
+  }
+
+  async reorderCategories(restaurantId: string, orderedIds: string[]) {
+    const categories = await this.categoriesRepo.find({
+      where: { restaurantId },
+      order: { sortOrder: 'ASC', name: 'ASC' },
+    });
+
+    if (orderedIds.length !== categories.length) {
+      throw new BadRequestException('Lista de categorias inválida');
+    }
+
+    const categoryIds = new Set(categories.map((category) => category.id));
+    for (const id of orderedIds) {
+      if (!categoryIds.has(id)) {
+        throw new BadRequestException('Categoria não encontrada');
+      }
+    }
+
+    const byId = new Map(categories.map((category) => [category.id, category]));
+
+    for (let index = 0; index < orderedIds.length; index++) {
+      const category = byId.get(orderedIds[index])!;
+      category.sortOrder = index + 1;
+    }
+
+    await this.categoriesRepo.save(categories);
+    return this.getCategories(restaurantId);
   }
 
   async deleteCategory(id: string, restaurantId: string) {
@@ -176,5 +213,30 @@ export class AdminService {
     if (!table) throw new NotFoundException('Mesa não encontrada');
     table.token = uuidv4();
     return this.tablesRepo.save(table);
+  }
+
+  async getRestaurantSettings(restaurantId: string) {
+    const restaurant = await this.restaurantsRepo.findOne({ where: { id: restaurantId } });
+    if (!restaurant) throw new NotFoundException('Restaurante não encontrado');
+
+    return {
+      id: restaurant.id,
+      name: restaurant.name,
+      paymentMode: restaurant.paymentMode,
+    };
+  }
+
+  async updateRestaurantSettings(restaurantId: string, dto: UpdatePaymentSettingsDto) {
+    const restaurant = await this.restaurantsRepo.findOne({ where: { id: restaurantId } });
+    if (!restaurant) throw new NotFoundException('Restaurante não encontrado');
+
+    restaurant.paymentMode = dto.paymentMode;
+    await this.restaurantsRepo.save(restaurant);
+
+    return {
+      id: restaurant.id,
+      name: restaurant.name,
+      paymentMode: restaurant.paymentMode,
+    };
   }
 }
