@@ -6,20 +6,15 @@ import { App } from './App';
 import { queryClient } from './lib/query-client';
 import { ThemeProvider } from './context/ThemeContext';
 import { initTheme } from './lib/theme';
+import { AppShellSkeleton } from './components/AppShellSkeleton';
 
 initTheme();
-
-const PageLoader = () => (
-  <div className="flex min-h-screen items-center justify-center text-zinc-500 dark:text-zinc-400">
-    Carregando...
-  </div>
-);
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
-        <Suspense fallback={<PageLoader />}>
+        <Suspense fallback={<AppShellSkeleton />}>
           <App />
         </Suspense>
       </QueryClientProvider>
