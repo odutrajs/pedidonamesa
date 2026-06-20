@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import type { RestaurantSettingsDto } from '@pedidonamesa/shared';
 import { AdminLayout } from '../components/admin/AdminLayout';
+import { DashboardTab } from '../components/admin/DashboardTab';
 import { OrdersTab } from '../components/admin/OrdersTab';
 import { CategoriesTab } from '../components/admin/CategoriesTab';
 import { ProductsTab } from '../components/admin/ProductsTab';
@@ -26,7 +27,7 @@ function FeatureRoute({
 
   if (isLoading) return null;
   if (settings && !settings[feature]) {
-    return <Navigate to="/admin/pedidos" replace />;
+    return <Navigate to="/admin" replace />;
   }
 
   return <>{children}</>;
@@ -36,7 +37,7 @@ export function AdminPage() {
   return (
     <Routes>
       <Route element={<AdminLayout />}>
-        <Route index element={<Navigate to="pedidos" replace />} />
+        <Route index element={<DashboardTab />} />
         <Route path="pedidos" element={<OrdersTab />} />
         <Route path="cardapio/categorias" element={<CategoriesTab />} />
         <Route path="cardapio/produtos" element={<ProductsTab />} />
@@ -74,7 +75,7 @@ export function AdminPage() {
             </FeatureRoute>
           }
         />
-        <Route path="*" element={<Navigate to="pedidos" replace />} />
+        <Route path="*" element={<Navigate to="/admin" replace />} />
       </Route>
     </Routes>
   );

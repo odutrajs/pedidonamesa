@@ -14,6 +14,7 @@ export const queryKeys = {
   financeDre: (from?: string, to?: string) => ['admin', 'finance', 'dre', from, to] as const,
   financeExpenses: (from?: string, to?: string) => ['admin', 'finance', 'expenses', from, to] as const,
   financeCashClosing: (date?: string) => ['admin', 'finance', 'cash-closing', date] as const,
+  reportsDashboard: (from?: string, to?: string) => ['admin', 'reports', 'dashboard', from, to] as const,
   superAdminRestaurants: ['super-admin', 'restaurants'] as const,
   superAdminRestaurant: (id: string) => ['super-admin', 'restaurant', id] as const,
   superAdminRestaurantUsers: (id: string) => ['super-admin', 'restaurant', id, 'users'] as const,

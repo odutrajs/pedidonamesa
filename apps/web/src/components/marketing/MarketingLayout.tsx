@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom';
-import { Button } from '../ui/Button';
 import { ThemeToggle } from '../ui/ThemeToggle';
 
 interface MarketingLayoutProps {
@@ -8,32 +7,42 @@ interface MarketingLayoutProps {
 
 export function MarketingLayout({ children }: MarketingLayoutProps) {
   return (
-    <div className="min-h-screen bg-white dark:bg-zinc-950">
-      <header className="sticky top-0 z-50 border-b border-zinc-200/80 bg-white/90 backdrop-blur-md dark:border-zinc-800/80 dark:bg-zinc-950/90">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
+    <div className="min-h-screen bg-black text-white selection:bg-blue-500/30">
+      <header className="fixed inset-x-0 top-0 z-50 border-b border-white/[0.06] bg-black/70 backdrop-blur-2xl backdrop-saturate-150">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-3.5 md:px-8">
           <Link
             to="/"
-            className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-50"
+            className="text-[15px] font-semibold tracking-tight text-white/95 transition hover:text-white"
           >
             Pedido na Mesa
           </Link>
-          <nav className="flex items-center gap-3">
+          <nav className="flex items-center gap-1 sm:gap-2">
+            <a
+              href="#recursos"
+              className="hidden rounded-full px-3.5 py-1.5 text-[13px] text-white/60 transition hover:bg-white/5 hover:text-white sm:inline"
+            >
+              Recursos
+            </a>
             <a
               href="#como-funciona"
-              className="hidden text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 sm:inline"
+              className="hidden rounded-full px-3.5 py-1.5 text-[13px] text-white/60 transition hover:bg-white/5 hover:text-white sm:inline"
             >
               Como funciona
             </a>
-            <ThemeToggle size="sm" />
-            <Link to="/login">
-              <Button variant="primary" size="sm">
-                Ver demo
-              </Button>
+            <ThemeToggle
+              size="sm"
+              className="border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
+            />
+            <Link
+              to="/login"
+              className="ml-1 rounded-full bg-[#0071e3] px-4 py-1.5 text-[13px] font-medium text-white transition hover:bg-[#0077ed]"
+            >
+              Ver demo
             </Link>
           </nav>
         </div>
       </header>
-      <main>{children}</main>
+      <main className="pt-[52px]">{children}</main>
     </div>
   );
 }

@@ -1,4 +1,6 @@
 import { ChefHat, HandPlatter, QrCode, Smartphone } from 'lucide-react';
+import { cn } from '../../lib/cn';
+import { glassCard, glassCardHover, glassIconBox, glassShine } from './glass';
 
 const steps = [
   {
@@ -29,26 +31,47 @@ const steps = [
 
 export function HowItWorksSection() {
   return (
-    <section id="como-funciona" className="border-b border-zinc-100 py-16 dark:border-zinc-800 md:py-24">
-      <div className="mx-auto max-w-6xl px-4">
+    <section id="como-funciona" className="relative border-t border-white/[0.06] py-24 md:py-32">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,rgba(0,113,227,0.06)_0%,transparent_60%)]" />
+
+      <div className="relative mx-auto max-w-7xl px-5 md:px-8">
         <div className="mx-auto max-w-2xl text-center">
-          <h2 className="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            Como funciona
-          </h2>
-          <p className="mt-3 text-zinc-600 dark:text-zinc-400">
-            Quatro passos do pedido à entrega — simples para todos.
+          <p className="text-[13px] font-medium uppercase tracking-[0.2em] text-blue-400">
+            Fluxo
           </p>
+          <h2 className="mt-4 text-[clamp(2rem,4vw,3rem)] font-semibold tracking-[-0.02em] text-white">
+            Quatro passos.
+            <br />
+            <span className="text-white/40">Zero fricção.</span>
+          </h2>
         </div>
 
-        <div className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-          {steps.map((item) => (
-            <div key={item.step} className="relative text-center">
-              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
-                <item.icon className="h-5 w-5 text-zinc-700 dark:text-zinc-300" />
+        <div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {steps.map((item, index) => (
+            <div key={item.step} className={cn(glassCard, glassCardHover, 'group p-7')}>
+              <div className={glassShine} />
+              {index < steps.length - 1 && (
+                <div className="pointer-events-none absolute -right-3 top-1/2 z-10 hidden h-px w-6 bg-gradient-to-r from-white/20 to-transparent lg:block" />
+              )}
+              <div className="relative">
+                <p className="text-[11px] font-medium tracking-[0.15em] text-blue-400/80">
+                  PASSO {item.step}
+                </p>
+                <div
+                  className={cn(
+                    glassIconBox,
+                    'mt-5 mb-5 h-12 w-12 transition group-hover:border-white/25',
+                  )}
+                >
+                  <item.icon className="h-5 w-5 text-white/70" />
+                </div>
+                <h3 className="text-[17px] font-semibold tracking-tight text-white">
+                  {item.title}
+                </h3>
+                <p className="mt-2 text-[14px] leading-relaxed text-white/45">
+                  {item.description}
+                </p>
               </div>
-              <p className="text-xs font-medium text-brand-600 dark:text-brand-400">{item.step}</p>
-              <h3 className="mt-1 font-semibold text-zinc-900 dark:text-zinc-50">{item.title}</h3>
-              <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{item.description}</p>
             </div>
           ))}
         </div>

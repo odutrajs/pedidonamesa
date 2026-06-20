@@ -12,6 +12,7 @@ import { BootstrapModule } from './bootstrap/bootstrap.module';
 import { BotModule } from './bot/bot.module';
 import { InventoryModule } from './inventory/inventory.module';
 import { FinanceModule } from './finance/finance.module';
+import { ReportsModule } from './reports/reports.module';
 import { SuperAdminModule } from './super-admin/super-admin.module';
 import { RestaurantFeaturesModule } from './restaurant-features/restaurant-features.module';
 import * as entities from './entities';
@@ -48,6 +49,7 @@ import * as entities from './entities';
     BotModule,
     InventoryModule,
     FinanceModule,
+    ReportsModule,
     SuperAdminModule,
     RestaurantFeaturesModule,
   ],

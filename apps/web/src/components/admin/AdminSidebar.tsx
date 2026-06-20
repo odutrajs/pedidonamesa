@@ -3,8 +3,10 @@ import { NavLink, useLocation } from 'react-router-dom';
 import {
   ChevronDown,
   ClipboardList,
+  LayoutDashboard,
   MessageCircle,
   Package,
+  Settings,
   ShoppingBag,
   UtensilsCrossed,
   Wallet,
@@ -16,7 +18,7 @@ import { cn } from '../../lib/cn';
 type MenuItem = {
   id: string;
   label: string;
-  icon: typeof ClipboardList;
+  icon: typeof LayoutDashboard;
   path?: string;
   feature?: keyof Pick<
     RestaurantSettingsDto,
@@ -26,6 +28,12 @@ type MenuItem = {
 };
 
 const ALL_MENU_ITEMS: MenuItem[] = [
+  {
+    id: 'dashboard',
+    label: 'Dashboard',
+    icon: LayoutDashboard,
+    path: '/admin',
+  },
   {
     id: 'pedidos',
     label: 'Pedidos',
@@ -72,23 +80,6 @@ const ALL_MENU_ITEMS: MenuItem[] = [
   },
 ];
 
-const inactiveClass =
-  'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/60 dark:hover:text-zinc-100';
-
-const activeClass =
-  'bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-50';
-
-function navLinkClass(isActive: boolean, disabled?: boolean) {
-  return cn(
-    'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition',
-    disabled
-      ? 'cursor-not-allowed text-zinc-400 dark:text-zinc-600'
-      : isActive
-        ? activeClass
-        : inactiveClass,
-  );
-}
-
 function isFeatureEnabled(
   settings: RestaurantSettingsDto | undefined,
   feature?: MenuItem['feature'],
@@ -96,6 +87,13 @@ function isFeatureEnabled(
   if (!feature) return true;
   if (!settings) return true;
   return settings[feature];
+}
+
+function isPathActive(path: string, pathname: string) {
+  if (path === '/admin') {
+    return pathname === '/admin' || pathname === '/admin/';
+  }
+  return pathname.startsWith(path);
 }
 
 export const AdminSidebar = memo(function AdminSidebar() {
@@ -116,37 +114,39 @@ export const AdminSidebar = memo(function AdminSidebar() {
     }).filter(Boolean) as MenuItem[];
   }, [settings]);
 
+  const mainItems = menuItems.filter((item) => item.id !== 'financeiro');
+  const bottomItems = menuItems.filter((item) => item.id === 'financeiro');
+
   return (
-    <aside className="w-full shrink-0 lg:w-56">
-      <nav className="space-y-1 rounded-xl border border-zinc-200 bg-white p-2 dark:border-zinc-800 dark:bg-zinc-900">
-        {menuItems.map((item) => {
+    <aside className="flex h-full w-[72px] shrink-0 flex-col items-center border-r border-sidebar-border bg-sidebar py-4">
+      <div className="mb-6 flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-lg font-bold text-primary-foreground">
+        P
+      </div>
+
+      <nav className="flex flex-1 flex-col items-center gap-1">
+        {mainItems.map((item) => {
           if (item.children) {
+            const active = isCardapioActive;
             return (
-              <div key={item.id}>
+              <div key={item.id} className="relative flex flex-col items-center">
                 <button
                   type="button"
+                  title={item.label}
                   onClick={() => setCardapioOpen((open) => !open)}
                   className={cn(
-                    'flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition',
-                    isCardapioActive
-                      ? 'text-zinc-900 dark:text-zinc-100'
-                      : inactiveClass,
+                    'flex h-11 w-11 items-center justify-center rounded-xl transition-colors',
+                    active
+                      ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                      : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
                   )}
                 >
-                  <span className="flex items-center gap-3">
-                    <item.icon className="h-4 w-4 shrink-0" />
-                    {item.label}
-                  </span>
-                  <ChevronDown
-                    className={cn(
-                      'h-4 w-4 shrink-0 transition',
-                      cardapioOpen ? 'rotate-180' : '',
-                    )}
-                  />
+                  <item.icon className="h-5 w-5" />
                 </button>
-
                 {cardapioOpen && (
-                  <div className="ml-4 mt-1 space-y-0.5 border-l border-zinc-200 pl-3 dark:border-zinc-700">
+                  <div className="absolute left-full top-0 z-50 ml-2 min-w-[160px] rounded-lg border border-border bg-popover p-1 shadow-lg">
+                    <p className="px-3 py-1.5 text-xs font-semibold text-muted-foreground">
+                      {item.label}
+                    </p>
                     {item.children.map((child) => (
                       <NavLink
                         key={child.path}
@@ -155,8 +155,8 @@ export const AdminSidebar = memo(function AdminSidebar() {
                           cn(
                             'block rounded-md px-3 py-2 text-sm transition',
                             isActive
-                              ? activeClass
-                              : inactiveClass,
+                              ? 'bg-accent text-accent-foreground'
+                              : 'text-foreground hover:bg-accent/60',
                           )
                         }
                       >
@@ -165,22 +165,61 @@ export const AdminSidebar = memo(function AdminSidebar() {
                     ))}
                   </div>
                 )}
+                {active && (
+                  <ChevronDown className="absolute -bottom-1 h-3 w-3 text-sidebar-foreground/50" />
+                )}
               </div>
             );
           }
+
+          const active = item.path ? isPathActive(item.path, location.pathname) : false;
 
           return (
             <NavLink
               key={item.id}
               to={item.path!}
-              className={({ isActive }) => navLinkClass(isActive)}
+              end={item.path === '/admin'}
+              title={item.label}
+              className={cn(
+                'flex h-11 w-11 items-center justify-center rounded-xl transition-colors',
+                active
+                  ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                  : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+              )}
             >
-              <item.icon className="h-4 w-4 shrink-0" />
-              {item.label}
+              <item.icon className="h-5 w-5" />
             </NavLink>
           );
         })}
       </nav>
+
+      <div className="mt-auto flex flex-col items-center gap-1">
+        {bottomItems.map((item) => {
+          const active = item.path ? isPathActive(item.path, location.pathname) : false;
+          return (
+            <NavLink
+              key={item.id}
+              to={item.path!}
+              title={item.label}
+              className={cn(
+                'flex h-11 w-11 items-center justify-center rounded-xl transition-colors',
+                active
+                  ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                  : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+              )}
+            >
+              <item.icon className="h-5 w-5" />
+            </NavLink>
+          );
+        })}
+        <button
+          type="button"
+          title="Configurações"
+          className="flex h-11 w-11 items-center justify-center rounded-xl text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+        >
+          <Settings className="h-5 w-5" />
+        </button>
+      </div>
     </aside>
   );
 });

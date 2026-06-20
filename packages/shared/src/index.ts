@@ -648,3 +648,34 @@ export interface CashClosingDto {
   expensesPaid: number;
   netCashFlow: number;
 }
+
+export interface TablePerformanceDto {
+  tableId: string;
+  tableNumber: number;
+  tableLabel: string | null;
+  revenue: number;
+  ordersCount: number;
+  itemsSold: number;
+  averageTicket: number;
+  averageStayMinutes: number | null;
+}
+
+export interface ProductOutputDto {
+  productId: string;
+  productName: string;
+  quantitySold: number;
+  revenue: number;
+}
+
+export interface ReportsDashboardDto {
+  period: { from: string; to: string };
+  revenue: number;
+  ordersCount: number;
+  cancelledOrders: number;
+  averageTicket: number;
+  itemsSold: number;
+  salesByChannel: SalesBreakdownDto[];
+  dailySales: DailySalesDto[];
+  tablePerformance: TablePerformanceDto[];
+  productOutput: ProductOutputDto[];
+}
