@@ -40,7 +40,6 @@ const MENU_ITEMS = [
     label: 'Estoque',
     icon: Package,
     path: '/admin/estoque',
-    disabled: true,
   },
   {
     id: 'carrinho',

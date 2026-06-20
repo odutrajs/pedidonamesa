@@ -6,3 +6,8 @@ export { Product } from './product.entity';
 export { Order } from './order.entity';
 export { OrderItem } from './order-item.entity';
 export { ProductSuggestion } from './product-suggestion.entity';
+export { Ingredient } from './ingredient.entity';
+export { ProductIngredient } from './product-ingredient.entity';
+export { StockMovement } from './stock-movement.entity';
+export { InventoryCount, InventoryCountLine } from './inventory-count.entity';
+export { Expense } from './expense.entity';

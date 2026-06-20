@@ -28,6 +28,7 @@ import {
 } from './dto/order.dto';
 import { mapOrder } from './order.mapper';
 import { OrdersGateway } from '../websocket/orders.gateway';
+import { InventoryService } from '../inventory/inventory.service';
 
 @Injectable()
 export class OrdersService {
@@ -43,6 +44,7 @@ export class OrdersService {
     @InjectRepository(Product)
     private readonly productsRepo: Repository<Product>,
     private readonly ordersGateway: OrdersGateway,
+    private readonly inventoryService: InventoryService,
   ) {}
 
   async createFromTableToken(tableToken: string, dto: CreateOrderDto): Promise<CreateOrderResponse> {
@@ -277,6 +279,8 @@ export class OrdersService {
     order.status = dto.status;
     await this.ordersRepo.save(order);
 
+    await this.handleStockForStatus(order, dto.status);
+
     if (
       dto.status === OrderStatus.PREPARING ||
       dto.status === OrderStatus.CANCELLED
@@ -309,10 +313,14 @@ export class OrdersService {
     await this.orderItemsRepo.save(item);
 
     const order = await this.findById(item.orderId);
+    const previousStatus = order.status;
     const derivedStatus = this.deriveOrderStatusFromItems(order.items);
     if (order.status !== derivedStatus && order.status !== OrderStatus.CANCELLED) {
       order.status = derivedStatus;
       await this.ordersRepo.save(order);
+      if (derivedStatus !== previousStatus) {
+        await this.handleStockForStatus(order, derivedStatus);
+      }
     }
 
     const full = await this.findById(item.orderId);
@@ -320,6 +328,19 @@ export class OrdersService {
     this.ordersGateway.emitOrderItemUpdated(restaurantId, mapped, item.id);
 
     return mapped;
+  }
+
+  private async handleStockForStatus(order: Order, status: OrderStatus) {
+    const fresh = await this.ordersRepo.findOne({ where: { id: order.id } });
+    if (!fresh) return;
+
+    if (status === OrderStatus.PREPARING && !fresh.stockDeducted) {
+      await this.inventoryService.consumeForOrder(fresh.id);
+    }
+
+    if (status === OrderStatus.CANCELLED && fresh.stockDeducted) {
+      await this.inventoryService.restoreForOrder(fresh.id);
+    }
   }
 
   private async syncItemsWithOrderStatus(order: Order, status: OrderStatus) {

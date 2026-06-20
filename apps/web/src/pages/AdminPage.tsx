@@ -7,6 +7,7 @@ import { TablesTab } from '../components/admin/TablesTab';
 import { DeliveryTab } from '../components/admin/DeliveryTab';
 import { WhatsAppTab } from '../components/admin/WhatsAppTab';
 import { CarrinhoTab } from '../components/admin/CarrinhoTab';
+import { EstoqueTab } from '../components/admin/EstoqueTab';
 import { FinanceiroTab } from '../components/admin/FinanceiroTab';
 
 export function AdminPage() {
@@ -21,6 +22,7 @@ export function AdminPage() {
         <Route path="cardapio/delivery" element={<DeliveryTab />} />
         <Route path="whatsapp" element={<WhatsAppTab />} />
         <Route path="carrinho" element={<CarrinhoTab />} />
+        <Route path="estoque" element={<EstoqueTab />} />
         <Route path="financeiro" element={<FinanceiroTab />} />
         <Route path="*" element={<Navigate to="pedidos" replace />} />
       </Route>

@@ -4,6 +4,9 @@ build
 .env
 .env.local
 .env.whatsapp
+
+# Baileys WhatsApp session (local dev + Docker volume in prod)
+apps/whatsapp-bot/auth/
 *.log
 .DS_Store
 coverage

@@ -10,6 +10,8 @@ import { AdminModule } from './admin/admin.module';
 import { StorageModule } from './storage/storage.module';
 import { BootstrapModule } from './bootstrap/bootstrap.module';
 import { BotModule } from './bot/bot.module';
+import { InventoryModule } from './inventory/inventory.module';
+import { FinanceModule } from './finance/finance.module';
 import * as entities from './entities';
 
 @Module({
@@ -42,6 +44,8 @@ import * as entities from './entities';
     StorageModule,
     BootstrapModule,
     BotModule,
+    InventoryModule,
+    FinanceModule,
   ],
 })
 export class AppModule {}

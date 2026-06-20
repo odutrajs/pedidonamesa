@@ -59,6 +59,9 @@ export class Order {
   @Column({ type: 'timestamptz', nullable: true })
   paidAt: Date | null;
 
+  @Column({ default: false })
+  stockDeducted: boolean;
+
   @ManyToOne(() => Table, (table) => table.orders, { nullable: true })
   @JoinColumn({ name: 'tableId' })
   table: Table | null;
