@@ -48,11 +48,11 @@ docker compose -f docker-compose.whatsapp.yaml up -d --build
 Na API (`.env` do deploy principal):
 
 ```
-WHATSAPP_BOT_SERVICE_URL=http://host.docker.internal:3001
+WHATSAPP_BOT_SERVICE_URL=http://whatsapp-bot:3001
 WHATSAPP_BOT_API_KEY=mesma-chave-segura
 ```
 
-O bot expõe a porta `3001` apenas em `127.0.0.1` do host — a API acessa via `host.docker.internal`.
+O bot entra na rede Docker `pedidonamesa_default` (mesma da API) — sem expor porta no host.
 
 O volume `whatsapp_auth` guarda a sessão Baileys — **não apague** após conectar, senão precisará escanear QR de novo.
 

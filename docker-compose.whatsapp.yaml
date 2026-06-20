@@ -1,6 +1,8 @@
 # Compose separado — NÃO incluir no deploy principal da Hostinger.
 # Local:  docker compose -f docker-compose.whatsapp.yaml --env-file .env.whatsapp up -d
 # Hostinger: projeto pedidonamesa-whatsapp (deploy via CI)
+#
+# O bot entra na rede pedidonamesa_default para a API alcançá-lo em http://whatsapp-bot:3001
 
 services:
   whatsapp-bot:
@@ -23,10 +25,10 @@ services:
       DUPLICATE_MESSAGE_WINDOW_MS: ${DUPLICATE_MESSAGE_WINDOW_MS:-15000}
       MAX_CONSECUTIVE_BOT_REPLIES: ${MAX_CONSECUTIVE_BOT_REPLIES:-5}
       LOG_LEVEL: ${LOG_LEVEL:-info}
-    ports:
-      - "127.0.0.1:3001:3001"
     volumes:
       - whatsapp_auth:/app/apps/whatsapp-bot/auth
+    networks:
+      - pedidonamesa_default
     logging:
       driver: json-file
       options:
@@ -35,3 +37,7 @@ services:
 
 volumes:
   whatsapp_auth:
+
+networks:
+  pedidonamesa_default:
+    external: true

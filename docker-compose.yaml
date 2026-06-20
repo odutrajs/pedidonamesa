@@ -184,3 +184,8 @@ volumes:
   miniodata:
   certbot-etc:
   certbot-www:
+
+networks:
+  default:
+    name: pedidonamesa_default
+    driver: bridge

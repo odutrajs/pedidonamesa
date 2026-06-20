@@ -89,7 +89,7 @@ jobs:
         run: bash .github/scripts/verify-hostinger-containers.sh
 
   deploy-whatsapp:
-    needs: build
+    needs: [build, deploy]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
