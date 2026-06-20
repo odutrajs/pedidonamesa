@@ -47,10 +47,18 @@ jobs:
           push: true
           tags: ghcr.io/odutrajs/pedidonamesa-nginx:latest
 
+      - name: Build and push WhatsApp bot
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/whatsapp-bot/Dockerfile
+          push: true
+          tags: ghcr.io/odutrajs/pedidonamesa-whatsapp-bot:latest
+
       - name: Make GHCR packages public
         run: |
           gh api "/user/packages?package_type=container" || true
-          for pkg in pedidonamesa-api pedidonamesa-web pedidonamesa-nginx; do
+          for pkg in pedidonamesa-api pedidonamesa-web pedidonamesa-nginx pedidonamesa-whatsapp-bot; do
             gh api --method PATCH "/user/packages/container/${pkg}" \
               --input - <<< '{"visibility":"public"}' || \
             gh api --method PUT "/user/packages/container/${pkg}" \
@@ -79,3 +87,28 @@ jobs:
           HOSTINGER_VM_ID: ${{ vars.HOSTINGER_VM_ID }}
           PROJECT_NAME: pedidonamesa
         run: bash .github/scripts/verify-hostinger-containers.sh
+
+  deploy-whatsapp:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy WhatsApp bot to Hostinger VPS
+        env:
+          HOSTINGER_API_KEY: ${{ secrets.HOSTINGER_API_KEY }}
+          HOSTINGER_VM_ID: ${{ vars.HOSTINGER_VM_ID }}
+          PROJECT_NAME: pedidonamesa-whatsapp
+          COMPOSE_PATH: docker-compose.whatsapp.yaml
+          PROJECT_ENVIRONMENT: |
+            RESTAURANT_SLUG=${{ vars.WHATSAPP_RESTAURANT_SLUG || 'demo' }}
+            API_BASE_URL=${{ vars.WEB_BASE_URL || 'https://cardapionamesa.com' }}
+            WHATSAPP_BOT_API_KEY=${{ secrets.WHATSAPP_BOT_API_KEY }}
+        run: bash .github/scripts/deploy-hostinger-whatsapp.sh
+
+      - name: Verify WhatsApp bot is running
+        env:
+          HOSTINGER_API_KEY: ${{ secrets.HOSTINGER_API_KEY }}
+          HOSTINGER_VM_ID: ${{ vars.HOSTINGER_VM_ID }}
+          PROJECT_NAME: pedidonamesa-whatsapp
+        run: bash .github/scripts/verify-hostinger-whatsapp.sh

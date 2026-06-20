@@ -1,14 +1,28 @@
 # Compose separado — NÃO incluir no deploy principal da Hostinger.
-# Uso: docker compose -f docker-compose.whatsapp.yaml up -d
+# Local:  docker compose -f docker-compose.whatsapp.yaml --env-file .env.whatsapp up -d
+# Hostinger: projeto pedidonamesa-whatsapp (deploy via CI)
 
 services:
   whatsapp-bot:
-    build:
-      context: .
-      dockerfile: apps/whatsapp-bot/Dockerfile
+    image: ghcr.io/odutrajs/pedidonamesa-whatsapp-bot:latest
+    pull_policy: always
     restart: unless-stopped
-    env_file:
-      - .env.whatsapp
+    environment:
+      RESTAURANT_SLUG: ${RESTAURANT_SLUG}
+      API_BASE_URL: ${API_BASE_URL}
+      WHATSAPP_BOT_API_KEY: ${WHATSAPP_BOT_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      BAILEYS_AUTH_DIR: ./auth
+      CONFIG_REFRESH_MS: ${CONFIG_REFRESH_MS:-60000}
+      HANDOFF_MINUTES: ${HANDOFF_MINUTES:-30}
+      HTTP_PORT: 3001
+      SESSION_TTL_MS: ${SESSION_TTL_MS:-1800000}
+      MAX_CONVERSATION_HISTORY: ${MAX_CONVERSATION_HISTORY:-6}
+      MAX_MESSAGES_PER_MINUTE: ${MAX_MESSAGES_PER_MINUTE:-8}
+      DUPLICATE_MESSAGE_WINDOW_MS: ${DUPLICATE_MESSAGE_WINDOW_MS:-15000}
+      MAX_CONSECUTIVE_BOT_REPLIES: ${MAX_CONSECUTIVE_BOT_REPLIES:-5}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
     ports:
       - "127.0.0.1:3001:3001"
     volumes:
