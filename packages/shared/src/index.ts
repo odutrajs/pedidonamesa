@@ -234,6 +234,49 @@ export interface MenuDto {
   upsell: UpsellConfigDto;
 }
 
+export interface WhatsAppBotConfigDto {
+  enabled: boolean;
+  paused: boolean;
+  restaurantName: string;
+  slug: string;
+  description: string | null;
+  welcomeMessage: string;
+  businessHours: string | null;
+  address: string | null;
+  deliveryMenuUrl: string;
+  menuSummary: string;
+}
+
+export interface WhatsAppOrderStatusDto {
+  found: boolean;
+  order?: {
+    id: string;
+    status: OrderStatus;
+    total: number;
+    createdAt: string;
+    items: string;
+  };
+}
+
+export type WhatsAppConnectionState =
+  | 'unconfigured'
+  | 'offline'
+  | 'connecting'
+  | 'qr_pending'
+  | 'connected'
+  | 'logged_out'
+  | 'disconnected';
+
+export interface WhatsAppConnectionStatusDto {
+  configured: boolean;
+  reachable: boolean;
+  state: WhatsAppConnectionState;
+  qrDataUrl: string | null;
+  connectedPhone: string | null;
+  message: string | null;
+  updatedAt: string;
+}
+
 export interface RestaurantSettingsDto {
   id: string;
   name: string;
@@ -244,6 +287,11 @@ export interface RestaurantSettingsDto {
   upsellFoodOnlyCategoryId: string | null;
   upsellDrinksOnlyEnabled: boolean;
   upsellDrinksOnlyCategoryId: string | null;
+  whatsappBotEnabled: boolean;
+  whatsappBotPaused: boolean;
+  whatsappWelcomeMessage: string | null;
+  whatsappBusinessHours: string | null;
+  whatsappAddress: string | null;
 }
 
 export interface StripeCheckoutDto {

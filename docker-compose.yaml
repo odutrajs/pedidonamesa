@@ -65,6 +65,11 @@ services:
       MINIO_PUBLIC_URL: ${MINIO_PUBLIC_URL}
       PORT: 3000
       NODE_ENV: production
+      WEB_BASE_URL: ${WEB_BASE_URL:-https://cardapionamesa.com}
+      WHATSAPP_BOT_SERVICE_URL: ${WHATSAPP_BOT_SERVICE_URL:-}
+      WHATSAPP_BOT_API_KEY: ${WHATSAPP_BOT_API_KEY:-}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     expose:
       - "3000"
 

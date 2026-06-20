@@ -3,6 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import {
   ChevronDown,
   ClipboardList,
+  MessageCircle,
   Package,
   ShoppingBag,
   UtensilsCrossed,
@@ -27,6 +28,12 @@ const MENU_ITEMS = [
       { label: 'Mesas', path: '/admin/cardapio/mesas' },
       { label: 'Delivery', path: '/admin/cardapio/delivery' },
     ],
+  },
+  {
+    id: 'whatsapp',
+    label: 'WhatsApp',
+    icon: MessageCircle,
+    path: '/admin/whatsapp',
   },
   {
     id: 'estoque',

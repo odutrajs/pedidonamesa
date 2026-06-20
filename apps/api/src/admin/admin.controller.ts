@@ -18,6 +18,7 @@ import { UserRole } from '@pedidonamesa/shared';
 import { JwtAuthGuard, assertRole } from '../auth/jwt-auth.guard';
 import { User } from '../entities/user.entity';
 import { AdminService } from './admin.service';
+import { WhatsAppBridgeService } from './whatsapp-bridge.service';
 import { OrdersService } from '../orders/orders.service';
 import {
   CreateCategoryDto,
@@ -52,6 +53,7 @@ export class AdminController {
   constructor(
     private readonly adminService: AdminService,
     private readonly ordersService: OrdersService,
+    private readonly whatsAppBridge: WhatsAppBridgeService,
   ) {}
 
   @Get('orders')
@@ -187,5 +189,17 @@ export class AdminController {
   updateSettings(@Req() req: { user: User }, @Body() dto: UpdateRestaurantSettingsDto) {
     assertRole(req.user, [UserRole.ADMIN]);
     return this.adminService.updateRestaurantSettings(req.user.restaurantId, dto);
+  }
+
+  @Get('whatsapp/connection')
+  getWhatsAppConnection(@Req() req: { user: User }) {
+    assertRole(req.user, [UserRole.ADMIN]);
+    return this.whatsAppBridge.getConnectionStatus();
+  }
+
+  @Post('whatsapp/disconnect')
+  disconnectWhatsApp(@Req() req: { user: User }) {
+    assertRole(req.user, [UserRole.ADMIN]);
+    return this.whatsAppBridge.disconnectSession();
   }
 }

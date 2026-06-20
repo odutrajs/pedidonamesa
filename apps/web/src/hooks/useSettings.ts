@@ -13,6 +13,11 @@ export type RestaurantSettingsUpdate = Partial<
     | 'upsellFoodOnlyCategoryId'
     | 'upsellDrinksOnlyEnabled'
     | 'upsellDrinksOnlyCategoryId'
+    | 'whatsappBotEnabled'
+    | 'whatsappBotPaused'
+    | 'whatsappWelcomeMessage'
+    | 'whatsappBusinessHours'
+    | 'whatsappAddress'
   >
 >;
 

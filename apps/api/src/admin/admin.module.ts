@@ -5,6 +5,7 @@ import { StorageModule } from '../storage/storage.module';
 import { OrdersModule } from '../orders/orders.module';
 import { AdminService } from './admin.service';
 import { AdminController } from './admin.controller';
+import { WhatsAppBridgeService } from './whatsapp-bridge.service';
 
 @Module({
   imports: [
@@ -13,6 +14,6 @@ import { AdminController } from './admin.controller';
     OrdersModule,
   ],
   controllers: [AdminController],
-  providers: [AdminService],
+  providers: [AdminService, WhatsAppBridgeService],
 })
 export class AdminModule {}

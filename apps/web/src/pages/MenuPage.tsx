@@ -18,8 +18,8 @@ import { CartSidebar, type DeliveryFormValues } from '../components/menu/CartSid
 import { CartDrawer } from '../components/menu/CartDrawer';
 import { ProductCategorySection } from '../components/menu/ProductCategorySection';
 import { ProductConfigureSheet } from '../components/menu/ProductConfigureSheet';
+import { MenuPageSkeleton } from '../components/menu/MenuPageSkeleton';
 import { PaymentCheckoutModal } from '../components/payment/PaymentCheckoutModal';
-import { Skeleton } from '../components/ui/Skeleton';
 import { FeedbackModal } from '../components/ui/FeedbackModal';
 import { EmptyState } from '../components/ui/EmptyState';
 import type { OrderPaymentContext } from '../hooks/usePayment';
@@ -253,15 +253,7 @@ export function MenuPage({
   }, [resetAfterOrder]);
 
   if (isLoading) {
-    return (
-      <MenuLayout restaurantName="Cardápio" subtitle="Carregando...">
-        <div className="space-y-6">
-          {Array.from({ length: 3 }).map((_, index) => (
-            <Skeleton key={index} className="h-40 w-full rounded-2xl bg-zinc-900" />
-          ))}
-        </div>
-      </MenuLayout>
-    );
+    return <MenuPageSkeleton />;
   }
 
   if (!menu) {

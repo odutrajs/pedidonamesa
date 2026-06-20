@@ -213,6 +213,29 @@ export class UpdateRestaurantSettingsDto {
   @ValidateIf((_, value) => value !== null)
   @IsUUID('4')
   upsellDrinksOnlyCategoryId?: string | null;
+
+  @IsOptional()
+  @IsBoolean()
+  whatsappBotEnabled?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  whatsappBotPaused?: boolean;
+
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  whatsappWelcomeMessage?: string | null;
+
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  whatsappBusinessHours?: string | null;
+
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  whatsappAddress?: string | null;
 }
 
 export class UpdateProductSuggestionsDto {

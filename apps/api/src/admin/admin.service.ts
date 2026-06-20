@@ -304,6 +304,11 @@ export class AdminService {
       upsellFoodOnlyCategoryId: restaurant.upsellFoodOnlyCategoryId,
       upsellDrinksOnlyEnabled: restaurant.upsellDrinksOnlyEnabled,
       upsellDrinksOnlyCategoryId: restaurant.upsellDrinksOnlyCategoryId,
+      whatsappBotEnabled: restaurant.whatsappBotEnabled,
+      whatsappBotPaused: restaurant.whatsappBotPaused,
+      whatsappWelcomeMessage: restaurant.whatsappWelcomeMessage,
+      whatsappBusinessHours: restaurant.whatsappBusinessHours,
+      whatsappAddress: restaurant.whatsappAddress,
     };
   }
 
@@ -351,6 +356,26 @@ export class AdminService {
       restaurant.upsellDrinksOnlyCategoryId = dto.upsellDrinksOnlyCategoryId;
     }
 
+    if (dto.whatsappBotEnabled !== undefined) {
+      restaurant.whatsappBotEnabled = dto.whatsappBotEnabled;
+    }
+
+    if (dto.whatsappBotPaused !== undefined) {
+      restaurant.whatsappBotPaused = dto.whatsappBotPaused;
+    }
+
+    if (dto.whatsappWelcomeMessage !== undefined) {
+      restaurant.whatsappWelcomeMessage = dto.whatsappWelcomeMessage;
+    }
+
+    if (dto.whatsappBusinessHours !== undefined) {
+      restaurant.whatsappBusinessHours = dto.whatsappBusinessHours;
+    }
+
+    if (dto.whatsappAddress !== undefined) {
+      restaurant.whatsappAddress = dto.whatsappAddress;
+    }
+
     await this.restaurantsRepo.save(restaurant);
 
     return {
@@ -363,6 +388,11 @@ export class AdminService {
       upsellFoodOnlyCategoryId: restaurant.upsellFoodOnlyCategoryId,
       upsellDrinksOnlyEnabled: restaurant.upsellDrinksOnlyEnabled,
       upsellDrinksOnlyCategoryId: restaurant.upsellDrinksOnlyCategoryId,
+      whatsappBotEnabled: restaurant.whatsappBotEnabled,
+      whatsappBotPaused: restaurant.whatsappBotPaused,
+      whatsappWelcomeMessage: restaurant.whatsappWelcomeMessage,
+      whatsappBusinessHours: restaurant.whatsappBusinessHours,
+      whatsappAddress: restaurant.whatsappAddress,
     };
   }
 }

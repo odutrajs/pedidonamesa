@@ -7,7 +7,10 @@
     "dev:web": "pnpm --filter @pedidonamesa/web dev",
     "build": "pnpm run --filter @pedidonamesa/api build && pnpm run --filter @pedidonamesa/web build",
     "docker:up": "docker compose -f infra/docker-compose.yml up -d",
-    "docker:down": "docker compose -f infra/docker-compose.yml down"
+    "docker:down": "docker compose -f infra/docker-compose.yml down",
+    "docker:whatsapp:up": "docker compose -f docker-compose.whatsapp.yaml up -d --build",
+    "docker:whatsapp:down": "docker compose -f docker-compose.whatsapp.yaml down",
+    "dev:whatsapp": "pnpm --filter @pedidonamesa/whatsapp-bot dev"
   },
   "devDependencies": {
     "typescript": "^5.7.2"

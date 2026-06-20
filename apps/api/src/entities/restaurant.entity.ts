@@ -46,6 +46,21 @@ export class Restaurant {
   @Column({ type: 'varchar', nullable: true })
   upsellDrinksOnlyCategoryId: string | null;
 
+  @Column({ default: true })
+  whatsappBotEnabled: boolean;
+
+  @Column({ default: false })
+  whatsappBotPaused: boolean;
+
+  @Column({ type: 'text', nullable: true })
+  whatsappWelcomeMessage: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  whatsappBusinessHours: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  whatsappAddress: string | null;
+
   @OneToMany(() => User, (user) => user.restaurant)
   users: User[];
 
