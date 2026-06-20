@@ -11,3 +11,14 @@ export function assertRole(user: User, roles: UserRole[]) {
     throw new UnauthorizedException('Permissão insuficiente');
   }
 }
+
+export function assertSuperAdmin(user: User) {
+  assertRole(user, [UserRole.SUPER_ADMIN]);
+}
+
+export function requireRestaurantId(user: User): string {
+  if (!user.restaurantId) {
+    throw new UnauthorizedException('Usuário sem restaurante associado');
+  }
+  return user.restaurantId;
+}

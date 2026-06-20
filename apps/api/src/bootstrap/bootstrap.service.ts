@@ -1,4 +1,5 @@
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { DataSource } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
@@ -9,9 +10,39 @@ import { Restaurant, User, Table, Category, Product } from '../entities';
 export class BootstrapService implements OnApplicationBootstrap {
   private readonly logger = new Logger(BootstrapService.name);
 
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(
+    private readonly dataSource: DataSource,
+    private readonly config: ConfigService,
+  ) {}
 
   async onApplicationBootstrap() {
+    await this.ensureSuperAdmin();
+    await this.ensureDemoRestaurant();
+  }
+
+  private async ensureSuperAdmin() {
+    const usersRepo = this.dataSource.getRepository(User);
+    const email = this.config.get('SUPER_ADMIN_EMAIL', 'super@pedidonamesa.com');
+    const existing = await usersRepo.findOne({ where: { email } });
+    if (existing) return;
+
+    const password = this.config.get('SUPER_ADMIN_PASSWORD', 'superadmin123');
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    await usersRepo.save(
+      usersRepo.create({
+        name: 'Super Admin',
+        email,
+        passwordHash,
+        role: UserRole.SUPER_ADMIN,
+        restaurantId: null,
+      }),
+    );
+
+    this.logger.log(`Super admin criado: ${email}`);
+  }
+
+  private async ensureDemoRestaurant() {
     const restaurantsRepo = this.dataSource.getRepository(Restaurant);
     const existing = await restaurantsRepo.findOne({ where: { slug: 'demo' } });
     if (existing) return;

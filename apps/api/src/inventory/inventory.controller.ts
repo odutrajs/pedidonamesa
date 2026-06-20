@@ -12,8 +12,9 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { UserRole } from '@pedidonamesa/shared';
-import { JwtAuthGuard, assertRole } from '../auth/jwt-auth.guard';
+import { JwtAuthGuard, assertRole, requireRestaurantId } from '../auth/jwt-auth.guard';
 import { User } from '../entities/user.entity';
+import { RestaurantFeaturesService } from '../restaurant-features/restaurant-features.service';
 import { InventoryService } from './inventory.service';
 import {
   CreateIngredientDto,
@@ -27,91 +28,99 @@ import {
 @Controller('admin/inventory')
 @UseGuards(JwtAuthGuard)
 export class InventoryController {
-  constructor(private readonly inventoryService: InventoryService) {}
+  constructor(
+    private readonly inventoryService: InventoryService,
+    private readonly featuresService: RestaurantFeaturesService,
+  ) {}
+
+  private async guardInventoryAdmin(req: { user: User }) {
+    assertRole(req.user, [UserRole.ADMIN]);
+    await this.featuresService.assertInventoryEnabled(requireRestaurantId(req.user));
+  }
 
   @Get('ingredients')
-  listIngredients(@Req() req: { user: User }) {
-    assertRole(req.user, [UserRole.ADMIN]);
-    return this.inventoryService.listIngredients(req.user.restaurantId);
+  async listIngredients(@Req() req: { user: User }) {
+    await this.guardInventoryAdmin(req);
+    return this.inventoryService.listIngredients(requireRestaurantId(req.user));
   }
 
   @Post('ingredients')
-  createIngredient(@Req() req: { user: User }, @Body() dto: CreateIngredientDto) {
-    assertRole(req.user, [UserRole.ADMIN]);
-    return this.inventoryService.createIngredient(req.user.restaurantId, dto);
+  async createIngredient(@Req() req: { user: User }, @Body() dto: CreateIngredientDto) {
+    await this.guardInventoryAdmin(req);
+    return this.inventoryService.createIngredient(requireRestaurantId(req.user), dto);
   }
 
   @Patch('ingredients/:id')
-  updateIngredient(
+  async updateIngredient(
     @Param('id') id: string,
     @Req() req: { user: User },
     @Body() dto: UpdateIngredientDto,
   ) {
-    assertRole(req.user, [UserRole.ADMIN]);
-    return this.inventoryService.updateIngredient(id, req.user.restaurantId, dto);
+    await this.guardInventoryAdmin(req);
+    return this.inventoryService.updateIngredient(id, requireRestaurantId(req.user), dto);
   }
 
   @Delete('ingredients/:id')
-  deleteIngredient(@Param('id') id: string, @Req() req: { user: User }) {
-    assertRole(req.user, [UserRole.ADMIN]);
-    return this.inventoryService.deleteIngredient(id, req.user.restaurantId);
+  async deleteIngredient(@Param('id') id: string, @Req() req: { user: User }) {
+    await this.guardInventoryAdmin(req);
+    return this.inventoryService.deleteIngredient(id, requireRestaurantId(req.user));
   }
 
   @Get('movements')
-  listMovements(@Req() req: { user: User }) {
-    assertRole(req.user, [UserRole.ADMIN]);
-    return this.inventoryService.listMovements(req.user.restaurantId);
+  async listMovements(@Req() req: { user: User }) {
+    await this.guardInventoryAdmin(req);
+    return this.inventoryService.listMovements(requireRestaurantId(req.user));
   }
 
   @Post('movements/purchase')
-  recordPurchase(@Req() req: { user: User }, @Body() dto: StockMovementDto) {
-    assertRole(req.user, [UserRole.ADMIN]);
-    return this.inventoryService.recordPurchase(req.user.restaurantId, dto);
+  async recordPurchase(@Req() req: { user: User }, @Body() dto: StockMovementDto) {
+    await this.guardInventoryAdmin(req);
+    return this.inventoryService.recordPurchase(requireRestaurantId(req.user), dto);
   }
 
   @Post('movements/adjustment')
-  recordAdjustment(@Req() req: { user: User }, @Body() dto: StockMovementDto) {
-    assertRole(req.user, [UserRole.ADMIN]);
-    return this.inventoryService.recordAdjustment(req.user.restaurantId, dto);
+  async recordAdjustment(@Req() req: { user: User }, @Body() dto: StockMovementDto) {
+    await this.guardInventoryAdmin(req);
+    return this.inventoryService.recordAdjustment(requireRestaurantId(req.user), dto);
   }
 
   @Get('alerts')
-  getAlerts(@Req() req: { user: User }) {
-    assertRole(req.user, [UserRole.ADMIN]);
-    return this.inventoryService.getLowStockAlerts(req.user.restaurantId);
+  async getAlerts(@Req() req: { user: User }) {
+    await this.guardInventoryAdmin(req);
+    return this.inventoryService.getLowStockAlerts(requireRestaurantId(req.user));
   }
 
   @Get('products/:productId/recipe')
-  getRecipe(@Param('productId') productId: string, @Req() req: { user: User }) {
-    assertRole(req.user, [UserRole.ADMIN]);
-    return this.inventoryService.getProductRecipe(productId, req.user.restaurantId);
+  async getRecipe(@Param('productId') productId: string, @Req() req: { user: User }) {
+    await this.guardInventoryAdmin(req);
+    return this.inventoryService.getProductRecipe(productId, requireRestaurantId(req.user));
   }
 
   @Put('products/:productId/recipe')
-  updateRecipe(
+  async updateRecipe(
     @Param('productId') productId: string,
     @Req() req: { user: User },
     @Body() dto: UpdateProductRecipeDto,
   ) {
-    assertRole(req.user, [UserRole.ADMIN]);
-    return this.inventoryService.updateProductRecipe(productId, req.user.restaurantId, dto);
+    await this.guardInventoryAdmin(req);
+    return this.inventoryService.updateProductRecipe(productId, requireRestaurantId(req.user), dto);
   }
 
   @Post('counts')
-  submitCount(@Req() req: { user: User }, @Body() dto: SubmitInventoryCountDto) {
-    assertRole(req.user, [UserRole.ADMIN]);
-    return this.inventoryService.submitInventoryCount(req.user.restaurantId, dto);
+  async submitCount(@Req() req: { user: User }, @Body() dto: SubmitInventoryCountDto) {
+    await this.guardInventoryAdmin(req);
+    return this.inventoryService.submitInventoryCount(requireRestaurantId(req.user), dto);
   }
 
   @Get('counts')
-  listCounts(@Req() req: { user: User }) {
-    assertRole(req.user, [UserRole.ADMIN]);
-    return this.inventoryService.listInventoryCounts(req.user.restaurantId);
+  async listCounts(@Req() req: { user: User }) {
+    await this.guardInventoryAdmin(req);
+    return this.inventoryService.listInventoryCounts(requireRestaurantId(req.user));
   }
 
   @Get('cmv')
-  getCmv(@Req() req: { user: User }, @Query() query: CmvReportQueryDto) {
-    assertRole(req.user, [UserRole.ADMIN]);
-    return this.inventoryService.getCmvReport(req.user.restaurantId, query.from, query.to);
+  async getCmv(@Req() req: { user: User }, @Query() query: CmvReportQueryDto) {
+    await this.guardInventoryAdmin(req);
+    return this.inventoryService.getCmvReport(requireRestaurantId(req.user), query.from, query.to);
   }
 }

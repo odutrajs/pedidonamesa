@@ -6,7 +6,7 @@ interface AuthUser {
   name: string;
   email: string;
   role: string;
-  restaurantId: string;
+  restaurantId: string | null;
 }
 
 interface AuthState {

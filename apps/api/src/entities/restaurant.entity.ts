@@ -28,6 +28,18 @@ export class Restaurant {
   @Column({ default: true })
   active: boolean;
 
+  @Column({ default: true })
+  inventoryEnabled: boolean;
+
+  @Column({ default: true })
+  financeEnabled: boolean;
+
+  @Column({ default: true })
+  whatsappEnabled: boolean;
+
+  @Column({ default: true })
+  deliveryEnabled: boolean;
+
   @Column({ type: 'enum', enum: PaymentMode, default: PaymentMode.PAY_AFTER })
   paymentMode: PaymentMode;
 

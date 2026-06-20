@@ -1,4 +1,4 @@
-import { memo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   ChevronDown,
@@ -9,9 +9,23 @@ import {
   UtensilsCrossed,
   Wallet,
 } from 'lucide-react';
+import type { RestaurantSettingsDto } from '@pedidonamesa/shared';
+import { useRestaurantSettings } from '../../hooks/useSettings';
 import { cn } from '../../lib/cn';
 
-const MENU_ITEMS = [
+type MenuItem = {
+  id: string;
+  label: string;
+  icon: typeof ClipboardList;
+  path?: string;
+  feature?: keyof Pick<
+    RestaurantSettingsDto,
+    'inventoryEnabled' | 'financeEnabled' | 'whatsappEnabled' | 'deliveryEnabled'
+  >;
+  children?: { label: string; path: string; feature?: 'deliveryEnabled' }[];
+};
+
+const ALL_MENU_ITEMS: MenuItem[] = [
   {
     id: 'pedidos',
     label: 'Pedidos',
@@ -26,7 +40,7 @@ const MENU_ITEMS = [
       { label: 'Categorias', path: '/admin/cardapio/categorias' },
       { label: 'Produtos', path: '/admin/cardapio/produtos' },
       { label: 'Mesas', path: '/admin/cardapio/mesas' },
-      { label: 'Delivery', path: '/admin/cardapio/delivery' },
+      { label: 'Delivery', path: '/admin/cardapio/delivery', feature: 'deliveryEnabled' },
     ],
   },
   {
@@ -34,12 +48,14 @@ const MENU_ITEMS = [
     label: 'WhatsApp',
     icon: MessageCircle,
     path: '/admin/whatsapp',
+    feature: 'whatsappEnabled',
   },
   {
     id: 'estoque',
     label: 'Estoque',
     icon: Package,
     path: '/admin/estoque',
+    feature: 'inventoryEnabled',
   },
   {
     id: 'carrinho',
@@ -52,6 +68,7 @@ const MENU_ITEMS = [
     label: 'Financeiro',
     icon: Wallet,
     path: '/admin/financeiro',
+    feature: 'financeEnabled',
   },
 ];
 
@@ -72,15 +89,37 @@ function navLinkClass(isActive: boolean, disabled?: boolean) {
   );
 }
 
+function isFeatureEnabled(
+  settings: RestaurantSettingsDto | undefined,
+  feature?: MenuItem['feature'],
+) {
+  if (!feature) return true;
+  if (!settings) return true;
+  return settings[feature];
+}
+
 export const AdminSidebar = memo(function AdminSidebar() {
   const location = useLocation();
+  const { data: settings } = useRestaurantSettings();
   const isCardapioActive = location.pathname.startsWith('/admin/cardapio');
   const [cardapioOpen, setCardapioOpen] = useState(isCardapioActive);
+
+  const menuItems = useMemo(() => {
+    return ALL_MENU_ITEMS.map((item) => {
+      if (item.children) {
+        const children = item.children.filter((child) => isFeatureEnabled(settings, child.feature));
+        if (children.length === 0) return null;
+        return { ...item, children };
+      }
+      if (!isFeatureEnabled(settings, item.feature)) return null;
+      return item;
+    }).filter(Boolean) as MenuItem[];
+  }, [settings]);
 
   return (
     <aside className="w-full shrink-0 lg:w-56">
       <nav className="space-y-1 rounded-xl border border-zinc-200 bg-white p-2 dark:border-zinc-800 dark:bg-zinc-900">
-        {MENU_ITEMS.map((item) => {
+        {menuItems.map((item) => {
           if (item.children) {
             return (
               <div key={item.id}>
@@ -130,22 +169,10 @@ export const AdminSidebar = memo(function AdminSidebar() {
             );
           }
 
-          if (item.disabled) {
-            return (
-              <div key={item.id} className={navLinkClass(false, true)}>
-                <item.icon className="h-4 w-4 shrink-0" />
-                <span className="flex-1">{item.label}</span>
-                <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
-                  Em breve
-                </span>
-              </div>
-            );
-          }
-
           return (
             <NavLink
               key={item.id}
-              to={item.path}
+              to={item.path!}
               className={({ isActive }) => navLinkClass(isActive)}
             >
               <item.icon className="h-4 w-4 shrink-0" />

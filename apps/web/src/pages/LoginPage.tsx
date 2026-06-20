@@ -55,7 +55,9 @@ export function LoginPage() {
     loginMutation.mutate(data, {
       onSuccess: (response) => {
         login(response.accessToken, response.user);
-        if (response.user.role === 'KITCHEN') {
+        if (response.user.role === 'SUPER_ADMIN') {
+          navigate('/super-admin');
+        } else if (response.user.role === 'KITCHEN') {
           navigate('/cozinha');
         } else {
           navigate('/admin');
@@ -67,7 +69,7 @@ export function LoginPage() {
   const errorMessage = getLoginErrorMessage(loginMutation.error);
 
   return (
-    <AppShell title="Entrar no painel" subtitle="Admin, cozinha ou garçom" variant="minimal">
+    <AppShell title="Entrar no painel" subtitle="Admin, cozinha, garçom ou plataforma" variant="minimal">
       <div className="mx-auto max-w-sm">
         <Link
           to="/"
@@ -107,6 +109,8 @@ export function LoginPage() {
 
         <p className="mt-4 text-center text-xs text-zinc-400 dark:text-zinc-500">
           Demo: admin@demo.com ou cozinha@demo.com — senha admin123
+          <br />
+          Plataforma: super@pedidonamesa.com — senha superadmin123
         </p>
       </div>
     </AppShell>

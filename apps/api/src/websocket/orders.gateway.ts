@@ -36,6 +36,10 @@ export class OrdersGateway implements OnGatewayConnection {
 
     try {
       const payload = this.jwtService.verify<JwtPayload>(token);
+      if (!payload.restaurantId) {
+        client.disconnect();
+        return;
+      }
       client.data.restaurantId = payload.restaurantId;
       client.data.userId = payload.sub;
       client.join(this.roomFor(payload.restaurantId));

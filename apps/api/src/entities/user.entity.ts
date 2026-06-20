@@ -27,12 +27,12 @@ export class User {
   @Column({ type: 'enum', enum: UserRole, default: UserRole.ADMIN })
   role: UserRole;
 
-  @Column()
-  restaurantId: string;
+  @Column({ nullable: true })
+  restaurantId: string | null;
 
-  @ManyToOne(() => Restaurant, (restaurant) => restaurant.users)
+  @ManyToOne(() => Restaurant, (restaurant) => restaurant.users, { nullable: true })
   @JoinColumn({ name: 'restaurantId' })
-  restaurant: Restaurant;
+  restaurant: Restaurant | null;
 
   @CreateDateColumn()
   createdAt: Date;

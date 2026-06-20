@@ -32,6 +32,7 @@ import {
   UpdateIngredientDto,
   UpdateProductRecipeDto,
 } from './dto/inventory.dto';
+import { RestaurantFeaturesService } from '../restaurant-features/restaurant-features.service';
 
 @Injectable()
 export class InventoryService {
@@ -48,6 +49,7 @@ export class InventoryService {
     private readonly productsRepo: Repository<Product>,
     @InjectRepository(Order)
     private readonly ordersRepo: Repository<Order>,
+    private readonly featuresService: RestaurantFeaturesService,
     @InjectRepository(OrderItem)
     private readonly orderItemsRepo: Repository<OrderItem>,
   ) {}
@@ -451,6 +453,9 @@ export class InventoryService {
     });
 
     if (!order || order.stockDeducted) return;
+
+    const inventoryEnabled = await this.featuresService.isInventoryEnabled(order.restaurantId);
+    if (!inventoryEnabled) return;
 
     const requirements = await this.buildOrderRequirements(order.restaurantId, order.items);
     if (requirements.size === 0) {

@@ -31,9 +31,79 @@ export function isProductOnChannel(
 }
 
 export enum UserRole {
+  SUPER_ADMIN = 'SUPER_ADMIN',
   ADMIN = 'ADMIN',
   KITCHEN = 'KITCHEN',
   WAITER = 'WAITER',
+}
+
+export interface RestaurantFeaturesDto {
+  inventoryEnabled: boolean;
+  financeEnabled: boolean;
+  whatsappEnabled: boolean;
+  deliveryEnabled: boolean;
+}
+
+export interface RestaurantSummaryDto {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  active: boolean;
+  inventoryEnabled: boolean;
+  financeEnabled: boolean;
+  whatsappEnabled: boolean;
+  deliveryEnabled: boolean;
+  userCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RestaurantDetailDto extends RestaurantSummaryDto {
+  paymentMode: PaymentMode;
+  whatsappBotEnabled: boolean;
+}
+
+export interface CreateRestaurantInput {
+  name: string;
+  slug: string;
+  description?: string;
+  active?: boolean;
+  inventoryEnabled?: boolean;
+  financeEnabled?: boolean;
+  whatsappEnabled?: boolean;
+  deliveryEnabled?: boolean;
+  adminName: string;
+  adminEmail: string;
+  adminPassword: string;
+}
+
+export interface UpdateRestaurantInput {
+  name?: string;
+  slug?: string;
+  description?: string | null;
+  active?: boolean;
+  inventoryEnabled?: boolean;
+  financeEnabled?: boolean;
+  whatsappEnabled?: boolean;
+  deliveryEnabled?: boolean;
+  paymentMode?: PaymentMode;
+  whatsappBotEnabled?: boolean;
+}
+
+export interface RestaurantUserDto {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  createdAt: string;
+}
+
+export interface CreateRestaurantUserInput {
+  name: string;
+  email: string;
+  password: string;
+  role: UserRole;
 }
 
 export enum PaymentMode {
@@ -289,6 +359,10 @@ export interface RestaurantSettingsDto {
   name: string;
   slug: string;
   paymentMode: PaymentMode;
+  inventoryEnabled: boolean;
+  financeEnabled: boolean;
+  whatsappEnabled: boolean;
+  deliveryEnabled: boolean;
   upsellDrinkCategoryId: string | null;
   upsellFoodOnlyEnabled: boolean;
   upsellFoodOnlyCategoryId: string | null;

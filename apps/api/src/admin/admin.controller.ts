@@ -15,7 +15,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UserRole } from '@pedidonamesa/shared';
-import { JwtAuthGuard, assertRole } from '../auth/jwt-auth.guard';
+import { JwtAuthGuard, assertRole, requireRestaurantId } from '../auth/jwt-auth.guard';
 import { User } from '../entities/user.entity';
 import { AdminService } from './admin.service';
 import { WhatsAppBridgeService } from './whatsapp-bridge.service';
@@ -59,25 +59,25 @@ export class AdminController {
   @Get('orders')
   getOrders(@Req() req: { user: User }) {
     assertRole(req.user, [UserRole.ADMIN]);
-    return this.ordersService.getRestaurantOrders(req.user.restaurantId);
+    return this.ordersService.getRestaurantOrders(requireRestaurantId(req.user));
   }
 
   @Get('categories')
   getCategories(@Req() req: { user: User }) {
     assertRole(req.user, [UserRole.ADMIN]);
-    return this.adminService.getCategories(req.user.restaurantId);
+    return this.adminService.getCategories(requireRestaurantId(req.user));
   }
 
   @Post('categories')
   createCategory(@Req() req: { user: User }, @Body() dto: CreateCategoryDto) {
     assertRole(req.user, [UserRole.ADMIN]);
-    return this.adminService.createCategory(req.user.restaurantId, dto);
+    return this.adminService.createCategory(requireRestaurantId(req.user), dto);
   }
 
   @Patch('categories/reorder')
   reorderCategories(@Req() req: { user: User }, @Body() dto: ReorderCategoriesDto) {
     assertRole(req.user, [UserRole.ADMIN]);
-    return this.adminService.reorderCategories(req.user.restaurantId, dto.orderedIds);
+    return this.adminService.reorderCategories(requireRestaurantId(req.user), dto.orderedIds);
   }
 
   @Patch('categories/:id')
@@ -87,19 +87,19 @@ export class AdminController {
     @Body() dto: UpdateCategoryDto,
   ) {
     assertRole(req.user, [UserRole.ADMIN]);
-    return this.adminService.updateCategory(id, req.user.restaurantId, dto);
+    return this.adminService.updateCategory(id, requireRestaurantId(req.user), dto);
   }
 
   @Delete('categories/:id')
   deleteCategory(@Param('id') id: string, @Req() req: { user: User }) {
     assertRole(req.user, [UserRole.ADMIN]);
-    return this.adminService.deleteCategory(id, req.user.restaurantId);
+    return this.adminService.deleteCategory(id, requireRestaurantId(req.user));
   }
 
   @Get('products')
   getProducts(@Req() req: { user: User }) {
     assertRole(req.user, [UserRole.ADMIN]);
-    return this.adminService.getProducts(req.user.restaurantId);
+    return this.adminService.getProducts(requireRestaurantId(req.user));
   }
 
   @Post('products')
@@ -110,7 +110,7 @@ export class AdminController {
     @UploadedFile() file?: Express.Multer.File,
   ) {
     assertRole(req.user, [UserRole.ADMIN]);
-    return this.adminService.createProduct(req.user.restaurantId, dto, file);
+    return this.adminService.createProduct(requireRestaurantId(req.user), dto, file);
   }
 
   @Patch('products/:id')
@@ -120,7 +120,7 @@ export class AdminController {
     @Body() dto: UpdateProductDto,
   ) {
     assertRole(req.user, [UserRole.ADMIN]);
-    return this.adminService.updateProduct(id, req.user.restaurantId, dto);
+    return this.adminService.updateProduct(id, requireRestaurantId(req.user), dto);
   }
 
   @Post('products/:id/image')
@@ -132,13 +132,13 @@ export class AdminController {
   ) {
     assertRole(req.user, [UserRole.ADMIN]);
     if (!file) throw new BadRequestException('Arquivo de imagem obrigatório');
-    return this.adminService.uploadProductImage(id, req.user.restaurantId, file);
+    return this.adminService.uploadProductImage(id, requireRestaurantId(req.user), file);
   }
 
   @Delete('products/:id')
   deleteProduct(@Param('id') id: string, @Req() req: { user: User }) {
     assertRole(req.user, [UserRole.ADMIN]);
-    return this.adminService.deleteProduct(id, req.user.restaurantId);
+    return this.adminService.deleteProduct(id, requireRestaurantId(req.user));
   }
 
   @Put('products/:id/suggestions')
@@ -148,19 +148,19 @@ export class AdminController {
     @Body() dto: UpdateProductSuggestionsDto,
   ) {
     assertRole(req.user, [UserRole.ADMIN]);
-    return this.adminService.updateProductSuggestions(id, req.user.restaurantId, dto);
+    return this.adminService.updateProductSuggestions(id, requireRestaurantId(req.user), dto);
   }
 
   @Get('tables')
   getTables(@Req() req: { user: User }) {
     assertRole(req.user, [UserRole.ADMIN]);
-    return this.adminService.getTables(req.user.restaurantId);
+    return this.adminService.getTables(requireRestaurantId(req.user));
   }
 
   @Post('tables')
   createTable(@Req() req: { user: User }, @Body() dto: CreateTableDto) {
     assertRole(req.user, [UserRole.ADMIN]);
-    return this.adminService.createTable(req.user.restaurantId, dto);
+    return this.adminService.createTable(requireRestaurantId(req.user), dto);
   }
 
   @Patch('tables/:id')
@@ -170,25 +170,25 @@ export class AdminController {
     @Body() dto: UpdateTableDto,
   ) {
     assertRole(req.user, [UserRole.ADMIN]);
-    return this.adminService.updateTable(id, req.user.restaurantId, dto);
+    return this.adminService.updateTable(id, requireRestaurantId(req.user), dto);
   }
 
   @Post('tables/:id/regenerate-token')
   regenerateToken(@Param('id') id: string, @Req() req: { user: User }) {
     assertRole(req.user, [UserRole.ADMIN]);
-    return this.adminService.regenerateTableToken(id, req.user.restaurantId);
+    return this.adminService.regenerateTableToken(id, requireRestaurantId(req.user));
   }
 
   @Get('settings')
   getSettings(@Req() req: { user: User }) {
     assertRole(req.user, [UserRole.ADMIN]);
-    return this.adminService.getRestaurantSettings(req.user.restaurantId);
+    return this.adminService.getRestaurantSettings(requireRestaurantId(req.user));
   }
 
   @Patch('settings')
   updateSettings(@Req() req: { user: User }, @Body() dto: UpdateRestaurantSettingsDto) {
     assertRole(req.user, [UserRole.ADMIN]);
-    return this.adminService.updateRestaurantSettings(req.user.restaurantId, dto);
+    return this.adminService.updateRestaurantSettings(requireRestaurantId(req.user), dto);
   }
 
   @Get('whatsapp/connection')

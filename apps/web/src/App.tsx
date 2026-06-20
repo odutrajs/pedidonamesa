@@ -20,6 +20,10 @@ const AdminPage = lazy(() =>
   import('./pages/AdminPage').then((m) => ({ default: m.AdminPage })),
 );
 
+const SuperAdminPage = lazy(() =>
+  import('./pages/SuperAdminPage').then((m) => ({ default: m.SuperAdminPage })),
+);
+
 const PageLoader = () => (
   <div className="flex min-h-[40vh] items-center justify-center text-zinc-500 dark:text-zinc-400">
     Carregando...
@@ -43,6 +47,10 @@ export function App() {
 
             <Route element={<ProtectedRoute roles={['ADMIN']} />}>
               <Route path="/admin/*" element={<AdminPage />} />
+            </Route>
+
+            <Route element={<ProtectedRoute roles={['SUPER_ADMIN']} />}>
+              <Route path="/super-admin/*" element={<SuperAdminPage />} />
             </Route>
 
             <Route path="*" element={<Navigate to="/" replace />} />

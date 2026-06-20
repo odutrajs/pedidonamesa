@@ -48,7 +48,7 @@ export class MenuService {
       where: { slug, active: true },
     });
 
-    if (!restaurant) {
+    if (!restaurant || !restaurant.deliveryEnabled) {
       throw new NotFoundException('Restaurante não encontrado');
     }
 

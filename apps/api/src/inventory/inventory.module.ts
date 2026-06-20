@@ -9,6 +9,7 @@ import {
   ProductIngredient,
   StockMovement,
 } from '../entities';
+import { RestaurantFeaturesModule } from '../restaurant-features/restaurant-features.module';
 import { InventoryService } from './inventory.service';
 import { InventoryController } from './inventory.controller';
 
@@ -23,6 +24,7 @@ import { InventoryController } from './inventory.controller';
       Order,
       OrderItem,
     ]),
+    RestaurantFeaturesModule,
   ],
   controllers: [InventoryController],
   providers: [InventoryService],

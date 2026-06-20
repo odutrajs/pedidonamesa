@@ -9,7 +9,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { UserRole } from '@pedidonamesa/shared';
-import { JwtAuthGuard, assertRole } from '../auth/jwt-auth.guard';
+import { JwtAuthGuard, assertRole, requireRestaurantId } from '../auth/jwt-auth.guard';
 import { User } from '../entities/user.entity';
 import { OrdersService } from './orders.service';
 import {
@@ -37,14 +37,14 @@ export class OrdersController {
   @Get('kitchen')
   getKitchenOrders(@Req() req: { user: User }) {
     assertRole(req.user, [UserRole.ADMIN, UserRole.KITCHEN, UserRole.WAITER]);
-    return this.ordersService.getKitchenOrders(req.user.restaurantId);
+    return this.ordersService.getKitchenOrders(requireRestaurantId(req.user));
   }
 
   @UseGuards(JwtAuthGuard)
   @Get('active')
   getActiveOrders(@Req() req: { user: User }) {
     assertRole(req.user, [UserRole.ADMIN, UserRole.KITCHEN, UserRole.WAITER]);
-    return this.ordersService.getActiveOrdersForRestaurant(req.user.restaurantId);
+    return this.ordersService.getActiveOrdersForRestaurant(requireRestaurantId(req.user));
   }
 
   @UseGuards(JwtAuthGuard)
@@ -55,7 +55,7 @@ export class OrdersController {
     @Req() req: { user: User },
   ) {
     assertRole(req.user, [UserRole.ADMIN, UserRole.KITCHEN, UserRole.WAITER]);
-    return this.ordersService.updateOrderStatus(id, req.user.restaurantId, dto);
+    return this.ordersService.updateOrderStatus(id, requireRestaurantId(req.user), dto);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -66,6 +66,6 @@ export class OrdersController {
     @Req() req: { user: User },
   ) {
     assertRole(req.user, [UserRole.ADMIN, UserRole.KITCHEN]);
-    return this.ordersService.updateOrderItemStatus(itemId, req.user.restaurantId, dto);
+    return this.ordersService.updateOrderItemStatus(itemId, requireRestaurantId(req.user), dto);
   }
 }
